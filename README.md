@@ -92,6 +92,8 @@ the module sends combined actions field by field. v0 answers end with a control 
 
 ## Changelog
 
+* 1.2 – Venta Humidifier: reset buttons (hygiene disc, cleaning) and maintenance intervals as variables for own
+  visualization pages; intervals changeable in the visualization (the properties are the initial values).
 * 1.1 – library renamed to *Venta Lokal*; main tile in Venta Automation with all devices and quick buttons; Generic
   Dehumidifier; air purifiers (device kind, PM2.5); warnings in plain text; v0 water level as stage (yellow/red/OK).
 * 1.0 – first version: Venta Humidifier (v0/v2, tile, maintenance, notifications) and Venta Automation.

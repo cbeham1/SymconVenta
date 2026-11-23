@@ -134,10 +134,22 @@ class VentaHumidifier extends IPSModule
                 $this->UpdateTile();
                 break;
             case 'ResetDisc':
+            case 'DiscReset':
                 $this->ResetDisc();
                 break;
             case 'ResetCleaning':
+            case 'CleaningReset':
                 $this->ResetCleaning();
+                break;
+            case 'DiscIntervalDays':
+                $this->SetValue('DiscIntervalDays', max(30, min(180, (int) $Value)));
+                $this->UpdateMaintenance();
+                $this->UpdateTile();
+                break;
+            case 'CleaningIntervalDays':
+                $this->SetValue('CleaningIntervalDays', max(7, min(56, (int) $Value)));
+                $this->UpdateMaintenance();
+                $this->UpdateTile();
                 break;
             default:
                 throw new Exception('Invalid Ident');
@@ -686,7 +698,7 @@ class VentaHumidifier extends IPSModule
         $estimate = json_decode($this->ReadAttributeString('Estimate'), true) ?: [];
         foreach (['Disc'  => ['DiscChanged', 'DiscRemaining', 'DiscInterval', 7, 'Change the hygiene disc'],
             'Cleaning'    => ['Cleaned', 'CleaningRemaining', 'CleaningInterval', 1, 'Clean the device']] as $key => [$date, $remaining, $interval, $warn, $text]) {
-            $days = max(1, $this->ReadPropertyInteger($interval));
+            $days = $this->IntervalDays($interval);
             $changed = $this->GetValue($date);
             $rest = $changed > 0 ? $days - (int) floor((time() - $changed) / 86400) : $days;
             $this->SetValueIfChanged($remaining, $rest);
@@ -698,6 +710,14 @@ class VentaHumidifier extends IPSModule
                 $this->ClearNotification(strtolower($key));
             }
         }
+    }
+
+    /** Interval in days: variable (changeable in the visualization), otherwise the property. */
+    private function IntervalDays(string $property): int
+    {
+        $id = @$this->GetIDForIdent($property . 'Days');
+        $days = $id ? (int) GetValue($id) : 0;
+        return max(1, $days > 0 ? $days : $this->ReadPropertyInteger($property));
     }
 
     private function ResetMaintenance(string $key, string $ident): void
@@ -784,6 +804,15 @@ class VentaHumidifier extends IPSModule
         IPS_SetVariableProfileAssociation('VENTA.Online', 0, $this->Translate('Offline'), '', 0xe74c3c);
         IPS_SetVariableProfileAssociation('VENTA.Online', 1, $this->Translate('Online'), '', 0x2ecc71);
         $this->Profile('VENTA.PM', VARIABLETYPE_INTEGER, 'Factory', ' µg/m³');
+        $this->Profile('VENTA.DiscInterval', VARIABLETYPE_INTEGER, 'Calendar', ' ' . $this->Translate('days'), [30, 180, 10]);
+        $this->Profile('VENTA.CleaningInterval', VARIABLETYPE_INTEGER, 'Calendar', ' ' . $this->Translate('days'), [7, 56, 7]);
+        foreach (['VENTA.DiscReset' => 'Disc changed', 'VENTA.CleaningReset' => 'Cleaned'] as $name => $text) {
+            if (!IPS_VariableProfileExists($name)) {
+                IPS_CreateVariableProfile($name, VARIABLETYPE_INTEGER);
+            }
+            IPS_SetVariableProfileIcon($name, 'Repeat');
+            IPS_SetVariableProfileAssociation($name, 1, $this->Translate($text), '', 0x2ecc71);
+        }
         if (!IPS_VariableProfileExists('VENTA.WaterStage')) {
             IPS_CreateVariableProfile('VENTA.WaterStage', VARIABLETYPE_INTEGER);
         }
@@ -849,6 +878,19 @@ class VentaHumidifier extends IPSModule
         $this->RegisterVariableInteger('DiscRemaining', $this->Translate('Hygiene disc remaining'), 'VENTA.Days', 31);
         $this->RegisterVariableInteger('Cleaned', $this->Translate('Last cleaning'), '~UnixTimestampDate', 32);
         $this->RegisterVariableInteger('CleaningRemaining', $this->Translate('Cleaning due in'), 'VENTA.Days', 33);
+        // reset buttons and intervals as variables (for own visualization pages; the tile has its own buttons)
+        $this->RegisterVariableInteger('DiscReset', $this->Translate('Hygiene disc'), 'VENTA.DiscReset', 36);
+        $this->EnableAction('DiscReset');
+        $this->RegisterVariableInteger('CleaningReset', $this->Translate('Cleaning'), 'VENTA.CleaningReset', 37);
+        $this->EnableAction('CleaningReset');
+        foreach (['DiscInterval' => ['Change the hygiene disc every', 'VENTA.DiscInterval', 38], 'CleaningInterval' => ['Clean the device every', 'VENTA.CleaningInterval', 39]] as $property => [$caption, $profile, $position]) {
+            $new = @$this->GetIDForIdent($property . 'Days') === false;
+            $this->RegisterVariableInteger($property . 'Days', $this->Translate($caption), $profile, $position);
+            $this->EnableAction($property . 'Days');
+            if ($new) {
+                $this->SetValue($property . 'Days', $this->ReadPropertyInteger($property));
+            }
+        }
     }
 
     private function MaintainWaterVariables(): void
@@ -893,8 +935,8 @@ class VentaHumidifier extends IPSModule
             'room'      => $get('RoomHumidity'), 'device' => $get('DeviceHumidity'), 'temperature' => $get('Temperature'),
             'water'     => $get('WaterLevel'), 'waterStage' => $get('WaterStage'), 'tank' => $this->ReadPropertyFloat('TankVolume'),
             'shortage'  => (bool) $get('WaterShortage'), 'fan' => $get('FanSpeed'),
-            'disc'      => (int) $get('DiscRemaining'), 'discInterval' => $this->ReadPropertyInteger('DiscInterval'),
-            'cleaning'  => (int) $get('CleaningRemaining'), 'cleaningInterval' => $this->ReadPropertyInteger('CleaningInterval'),
+            'disc'      => (int) $get('DiscRemaining'), 'discInterval' => $this->IntervalDays('DiscInterval'),
+            'cleaning'  => (int) $get('CleaningRemaining'), 'cleaningInterval' => $this->IntervalDays('CleaningInterval'),
             'last'      => (int) $get('LastResponse'), 'reason' => (string) $get('Reason'),
             'kind'      => $this->Translate(self::KINDS[$this->Kind()]), 'purifier' => $this->Kind() === 3,
             'dust'      => $get('Dust'), 'warnings' => (string) $get('WarningText'),
