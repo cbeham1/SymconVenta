@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--ok:#2ecc71;--warn:#f39c12;--blue:#5ec8e5;--grey:#8a96a3;--acc:#2a9d8f}
+.vt{--fg:#e8edf2;--sub:#9aa5b1;--box:rgba(255,255,255,.045);--line:rgba(255,255,255,.08);--track:rgba(255,255,255,.1)}
+.vt.vl{--fg:#1f2933;--sub:#5b6672;--box:rgba(0,0,0,.035);--line:rgba(0,0,0,.08);--track:rgba(0,0,0,.08)}
+html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
+*{box-sizing:border-box}
+.vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
+.in{height:100%;display:flex;flex-direction:column;gap:.4em;padding:2px 4px;font-size:clamp(12px,min(4.2cqw,6.5cqh),18px);line-height:1.25;overflow:hidden}
+.hd{display:flex;align-items:center;gap:.5em;font-weight:600}
+.hd i{width:.6em;height:.6em;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 .22em color-mix(in srgb,var(--c) 25%,transparent)}
+.hd em{margin-left:auto;font-style:normal;font-size:.75em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:1em;padding:.1em .7em}
+.ck{display:flex;flex-direction:column;gap:.3em;font-size:.85em}
+.ck div{display:flex;gap:.5em;align-items:center;background:var(--box);border-radius:8px;padding:.3em .55em}
+.ck i{width:.55em;height:.55em;border-radius:50%;background:var(--c);flex:none}.ck b{margin-left:auto;font-weight:600}
+button{font:inherit;font-size:.82em;color:var(--fg);background:var(--box);border:1px solid var(--line);border-radius:7px;padding:.3em .8em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(--warn);border-color:var(--warn)}
+.gr{margin-top:auto;font-size:max(11px,.75em);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+<div class="vt" id="vt"><div class="in" id="in"></div></div>
+<script>
+let D = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const T = k => (D.t && D.t[k]) || k;
+const act = (ident, value) => { if (typeof requestAction === 'function') requestAction(ident, value); };
+const row = (ok, text, value) => '<div style="--c:' + (ok ? 'var(--ok)' : 'var(--grey)') + '"><i></i><span>' + esc(text) + '</span><b>' + esc(value) + '</b></div>';
+
+function render() {
+  if (!D) return;
+  const color = !D.active ? 'var(--grey)' : (D.season ? 'var(--blue)' : 'var(--grey)');
+  const chip = !D.active ? T('Automation') + ' ' + T('OFF') : (D.season ? T('Heating season') : T('Pause'));
+  let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(T('Automation')) + '</span><em>' + esc(chip) + '</em></div>';
+  h += '<div><button id="main"' + (D.active ? ' class="on"' : '') + '>' + esc(T('Automation') + ': ' + (D.active ? T('ON') : T('OFF'))) + '</button></div>';
+  h += '<div class="ck">'
+    + row(D.winter, T('Heating'), D.winterConfigured ? (D.winter ? T('Winter') : T('Summer')) : T('not configured'))
+    + row(D.tempOk, T('Outdoor 24 h mean') + ' (< ' + D.start + ' °C)', D.outdoor === null ? T('not configured') : D.outdoor.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' °C')
+    + row(D.ventilation, T('Ventilation running'), D.ventText === null ? T('not configured') : (D.ventText === 'ON' || D.ventText === 'OFF' ? T(D.ventText) : D.ventText))
+    + row(D.presence, T('Somebody at home'), D.presenceConfigured ? (D.presence ? T('yes') : T('no')) : T('not configured'))
+    + row(true, D.day ? T('Day – automatic') : T('Night – sleep mode'), T('Target') + ' ' + D.target + ' %')
+    + '</div>';
+  h += '<div class="gr">' + esc(D.reason) + ' · ' + esc(T('Off from')) + ' ' + D.humidityOff + ' %</div>';
+  $('in').innerHTML = h;
+}
+
+function theme() {
+  const vt = $('vt');
+  if (D.theme === 1) { vt.classList.remove('vl'); return; }
+  if (D.theme === 2) { vt.classList.add('vl'); return; }
+  const s = getComputedStyle(document.documentElement);
+  const lum = n => { let v = s.getPropertyValue(n).replace(/[^0-9a-f]/gi, ''); if (v.length < 6) return -1;
+    v = v.length === 8 && /^ff/i.test(v) ? v.slice(2) : v.slice(0, 6); const c = parseInt(v, 16); return 0.299 * (c >> 16) + 0.587 * (c >> 8 & 255) + 0.114 * (c & 255); };
+  const b = lum('--card-color'), f = lum('--content-color');
+  vt.classList.toggle('vl', b < 0 ? matchMedia('(prefers-color-scheme: light)').matches : b >= (f < 0 ? 128 : f));
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.id !== 'main') return;
+  // switching ON switches the devices automatically -> two steps
+  if (!D.active && !b.classList.contains('ask')) {
+    const text = b.textContent; b.classList.add('ask'); b.textContent = T('Sure?');
+    setTimeout(() => { b.classList.remove('ask'); b.textContent = text; }, 4000);
+    return;
+  }
+  D.active = !D.active; render(); act('Active', D.active);
+});
+
+function handleMessage(data) {
+  D = typeof data === 'string' ? JSON.parse(data) : data;
+  theme(); render();
+}
+
+if (D) { theme(); render(); }
+</script>
+</body>
+</html>

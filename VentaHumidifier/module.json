@@ -1,0 +1,16 @@
+{
+    "id": "{441260F2-692F-42DC-8E58-635EAD4615C1}",
+    "name": "Venta Humidifier",
+    "type": 3,
+    "vendor": "Venta",
+    "aliases": [
+        "Venta Luftbefeuchter",
+        "Venta Airwasher",
+        "Venta Luftwäscher"
+    ],
+    "url": "https://github.com/cbeham1/SymconVenta/blob/main/VentaHumidifier/README.md",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "VENTA"
+}

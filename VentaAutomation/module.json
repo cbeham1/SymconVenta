@@ -1,0 +1,15 @@
+{
+    "id": "{689FA4E4-5093-4B1D-9B41-DBEB9FDE51C5}",
+    "name": "Venta Automation",
+    "type": 3,
+    "vendor": "Venta",
+    "aliases": [
+        "Venta Saisonautomatik",
+        "Venta Season Control"
+    ],
+    "url": "https://github.com/cbeham1/SymconVenta/blob/main/VentaAutomation/README.md",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "VENTAA"
+}

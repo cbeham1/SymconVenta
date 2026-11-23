@@ -1,0 +1,133 @@
+{
+    "elements": [
+        {
+            "type": "List",
+            "name": "Devices",
+            "caption": "Humidifiers controlled by this automation",
+            "add": true,
+            "delete": true,
+            "columns": [
+                {
+                    "caption": "Venta Humidifier instance",
+                    "name": "InstanceID",
+                    "width": "auto",
+                    "add": 0,
+                    "edit": {
+                        "type": "SelectInstance"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Conditions for the heating season",
+            "items": [
+                {
+                    "type": "SelectVariable",
+                    "name": "HeatingSeasonVariable",
+                    "caption": "Summer/winter variable of the heating (optional, boolean)"
+                },
+                {
+                    "type": "Select",
+                    "name": "HeatingWinterValue",
+                    "caption": "Winter means value",
+                    "options": [
+                        {
+                            "caption": "false",
+                            "value": false
+                        },
+                        {
+                            "caption": "true",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "OutdoorTemperatureVariable",
+                    "caption": "Outdoor temperature (24 h mean from the archive if logged)"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VentilationVariable",
+                    "caption": "Ventilation running (optional: boolean or power in W)"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "VentilationThreshold",
+                    "caption": "Ventilation counts as running above",
+                    "suffix": "W",
+                    "digits": 1
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Presence and day/night",
+            "items": [
+                {
+                    "type": "SelectVariable",
+                    "name": "PresenceVariable",
+                    "caption": "Somebody at home (optional, boolean)"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "DayNightVariable",
+                    "caption": "Day/night (optional, boolean; otherwise 7–21 h = day)"
+                },
+                {
+                    "type": "Select",
+                    "name": "DayValue",
+                    "caption": "Day means value",
+                    "options": [
+                        {
+                            "caption": "true",
+                            "value": true
+                        },
+                        {
+                            "caption": "false",
+                            "value": false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "UpdateInterval",
+            "caption": "Evaluation interval",
+            "suffix": "s",
+            "minimum": 30
+        },
+        {
+            "type": "Select",
+            "name": "TileTheme",
+            "caption": "Design of the tile",
+            "options": [
+                {
+                    "caption": "Automatic (design of the visualization)",
+                    "value": 0
+                },
+                {
+                    "caption": "Dark",
+                    "value": 1
+                },
+                {
+                    "caption": "Light",
+                    "value": 2
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Evaluate now",
+            "onClick": "VENTAA_Update($id);"
+        },
+        {
+            "type": "Label",
+            "caption": "Target humidity day/night, start/end of the heating season and the mould protection limit are variables of this instance and can be changed in the visualization."
+        }
+    ]
+}

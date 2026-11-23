@@ -1,0 +1,12 @@
+{
+    "id": "{224DCBC3-1C72-430D-975A-555584C7FEA2}",
+    "author": "Christian Castillo-Beham",
+    "name": "Venta",
+    "url": "https://github.com/cbeham1/SymconVenta",
+    "compatibility": {
+        "version": "7.0"
+    },
+    "version": "1.0",
+    "build": 1,
+    "date": 0
+}

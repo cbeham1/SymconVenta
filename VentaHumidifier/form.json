@@ -1,0 +1,155 @@
+{
+    "elements": [
+        {
+            "type": "ValidationTextBox",
+            "name": "Host",
+            "caption": "IP address or host name of the device"
+        },
+        {
+            "type": "Select",
+            "name": "Protocol",
+            "caption": "Protocol",
+            "options": [
+                {
+                    "caption": "Automatic",
+                    "value": 0
+                },
+                {
+                    "caption": "v0 – TCP port 48000 (LP60/LPH60, LW60T, LW62T, AH902/AW902)",
+                    "value": 1
+                },
+                {
+                    "caption": "v2 – HTTP (LW73/LW74, LP73/LP74)",
+                    "value": 2
+                }
+            ]
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "UpdateInterval",
+            "caption": "Update interval",
+            "suffix": "s",
+            "minimum": 30
+        },
+        {
+            "type": "SelectVariable",
+            "name": "RoomHumidityVariable",
+            "caption": "Room humidity sensor (optional, used for the automation; otherwise the sensor of the device)"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "TankVolume",
+            "caption": "Water tank volume (for the fill level bar, 0 = unknown)",
+            "suffix": "l",
+            "digits": 1
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Maintenance",
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "DiscInterval",
+                    "caption": "Change the hygiene disc every",
+                    "suffix": "days",
+                    "minimum": 30
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "CleaningInterval",
+                    "caption": "Clean the device every",
+                    "suffix": "days",
+                    "minimum": 7
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Notifications",
+            "items": [
+                {
+                    "type": "SelectInstance",
+                    "name": "NotifyVisualization",
+                    "caption": "Push notification to tile visualization (optional)"
+                },
+                {
+                    "type": "SelectScript",
+                    "name": "NotifyScript",
+                    "caption": "Script for notifications (optional, see README)"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "NotifyWater",
+                    "caption": "Water shortage"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "NotifyMaintenance",
+                    "caption": "Cleaning / hygiene disc due"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "NotifyOffline",
+                    "caption": "Device offline for more than 2 hours (only during the heating season of the automation)"
+                }
+            ]
+        },
+        {
+            "type": "Select",
+            "name": "TileTheme",
+            "caption": "Design of the tile",
+            "options": [
+                {
+                    "caption": "Automatic (design of the visualization)",
+                    "value": 0
+                },
+                {
+                    "caption": "Dark",
+                    "value": 1
+                },
+                {
+                    "caption": "Light",
+                    "value": 2
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Update now",
+            "onClick": "VENTA_Update($id);"
+        },
+        {
+            "type": "Label",
+            "caption": "v0 devices (e.g. LPH60) must be authorized once: while the module asks the device (answer PAUTH), confirm on the device. See README."
+        }
+    ],
+    "status": [
+        {
+            "code": 102,
+            "icon": "active",
+            "caption": "Device connected"
+        },
+        {
+            "code": 201,
+            "icon": "inactive",
+            "caption": "Please enter the IP address of the device"
+        },
+        {
+            "code": 202,
+            "icon": "error",
+            "caption": "Device not reachable"
+        },
+        {
+            "code": 203,
+            "icon": "error",
+            "caption": "Authorization on the device required"
+        },
+        {
+            "code": 204,
+            "icon": "error",
+            "caption": "Protocol not detected"
+        }
+    ]
+}
