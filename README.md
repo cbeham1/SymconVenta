@@ -49,6 +49,7 @@ accept only one field per command (handled by the module).
 
 ## Changelog
 
+* 1.4 – redesigned tiles: humidity gauge with comfort band and target marker, value grid with icons, boxed maintenance block, humidity bars in the main and dehumidifier tile
 * 1.3 – tiles leave room for the tile title, spread over the full height; LED variable for v2 devices before the first contact
 * 1.2 – reset buttons and maintenance intervals as variables
 * 1.1 – main tile, Generic Dehumidifier, air purifiers, warnings in plain text

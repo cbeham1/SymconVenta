@@ -12,15 +12,21 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 /* all sizes in em: the font grows with the tile */
 .vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
 /* top space for the tile title of the visualization; content spreads over the full height */
-.in{height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:.3em;padding:42px 4px 2px;font-size:clamp(11px,min(3cqw,3.9cqh),20px);line-height:1.25;overflow:hidden}
+.in{height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:.45em;padding:44px 14px 10px;font-size:clamp(11px,min(2.9cqw,3.7cqh),19px);line-height:1.25;overflow:hidden}
+.top{display:grid;grid-template-columns:minmax(7em,36%) 1fr;gap:.7em;align-items:center}
+.gg svg{width:100%;display:block;overflow:visible}
+.gt,.gb,.gv{fill:none;stroke-width:9;stroke-linecap:round}.gt{stroke:var(--track)}.gb{stroke:color-mix(in srgb,var(--ok) 28%,transparent);stroke-linecap:butt}
+.gv{transition:stroke-dasharray .6s}.gm{fill:var(--fg);stroke:var(--card,#2b2f36);stroke-width:2}
+.gn{font:700 22px "Segoe UI",Arial;text-anchor:middle}.gl{font:9px "Segoe UI",Arial;fill:var(--sub);text-anchor:middle}
+.mi span svg{width:1.05em;height:1.05em;vertical-align:-.18em;margin-right:.3em;fill:none;stroke:var(--sub);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .hd{display:flex;align-items:center;gap:.5em;font-weight:600}
 .hd i{width:.6em;height:.6em;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 .22em color-mix(in srgb,var(--c) 25%,transparent)}
 .hd span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hd em{margin-left:auto;font-style:normal;font-size:.75em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:1em;padding:.1em .7em;white-space:nowrap}
 .big{display:flex;align-items:baseline;gap:.5em}.big b{font-size:2.6em;font-weight:700;line-height:1;color:var(--h)}.big span{color:var(--sub);font-size:.85em}
 .mi div,.sg,button{border-radius:9px}
-.mi{display:grid;grid-template-columns:repeat(auto-fit,minmax(5.5em,1fr));gap:.35em}
-.mi div{display:flex;flex-direction:column;background:var(--box);border-radius:8px;padding:.3em .55em;min-width:0}
+.mi{display:grid;grid-template-columns:1fr 1fr;gap:.4em}
+.mi div{display:flex;flex-direction:column;background:var(--box);border:1px solid var(--line);border-radius:10px;padding:.4em .65em;min-width:0}
 .mi span{color:var(--sub);font-size:max(11px,.72em);white-space:nowrap}.mi b{font-size:1.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ct{display:flex;flex-wrap:wrap;gap:.35em;align-items:center}
 .sg{display:flex;flex:1 1 100%;background:var(--box);border-radius:9px;padding:2px;gap:2px}.sg.zg{flex:1 1 auto}
@@ -31,7 +37,8 @@ button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(
 .lb{color:var(--sub);font-size:.82em;padding:.35em .6em;flex:none}
 .dis{opacity:.4;pointer-events:none}
 .bar{display:grid;grid-template-columns:6.5em 1fr auto;align-items:center;gap:.5em;font-size:.82em}.bar span{color:var(--sub)}
-.tr{height:.5em;border-radius:.25em;background:var(--track);overflow:hidden}.tr i{display:block;height:100%;border-radius:.25em;background:var(--c)}
+.tr{height:.55em;border-radius:.3em;background:var(--track);overflow:hidden}.tr i{display:block;height:100%;border-radius:.3em;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 70%,transparent),var(--c))}
+.mt{background:var(--box);border:1px solid var(--line);border-radius:10px;padding:.45em .65em}
 .gr{font-size:max(11px,.75em);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mt{display:flex;flex-direction:column;gap:.35em}
 </style>
@@ -50,6 +57,29 @@ const time = ts => { const x = new Date(ts * 1000); return x.toLocaleTimeString(
 const date = ts => { const x = new Date(ts * 1000); return x.toLocaleDateString() + ' ' + time(ts); };
 const btn = (attrs, text, on) => '<button ' + attrs + (on ? ' class="on"' : '') + '>' + esc(text) + '</button>';
 
+const ICON = {
+  temp: '<svg viewBox="0 0 24 24"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>',
+  drop: '<svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+  fan: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.8"/><path d="M12 10.2C12 6 13 3.5 15.5 3.5S19 6 15 9.5M13.8 12c4.2 0 6.7 1 6.7 3.5S18 19 14.5 15M12 13.8c0 4.2-1 6.7-3.5 6.7S5 18 9 14.5M10.2 12C6 12 3.5 11 3.5 8.5S6 5 9.5 9"/></svg>',
+  dust: '<svg viewBox="0 0 24 24"><circle cx="7" cy="8" r="1.5"/><circle cx="15" cy="6" r="1.2"/><circle cx="12" cy="13" r="1.8"/><circle cx="18" cy="15" r="1.4"/><circle cx="7" cy="17" r="1.2"/></svg>',
+  target: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/></svg>'
+};
+
+/** Semicircle 0–100 %: track, comfort band 40–60 %, value arc, target marker, value in the middle. */
+function gauge(value, target, color) {
+  const R = 46, C = Math.PI * R;
+  const pt = p => { const a = Math.PI * (1 - p / 100); return [60 + R * Math.cos(a), 58 - R * Math.sin(a)]; };
+  const arc = 'M14 58 A46 46 0 0 1 106 58';
+  const v = value === null || value === undefined ? 0 : Math.max(0, Math.min(100, value));
+  let s = '<svg viewBox="0 0 120 70"><path d="' + arc + '" class="gt"/>'
+    + '<path d="' + arc + '" class="gb" stroke-dasharray="0 ' + (C * 0.4) + ' ' + (C * 0.2) + ' ' + C + '"/>'
+    + '<path d="' + arc + '" class="gv" style="stroke:' + color + '" stroke-dasharray="' + (C * v / 100) + ' ' + C + '"/>';
+  if (target) { const [x, y] = pt(target); s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4" class="gm"/>'; }
+  s += '<text x="60" y="52" class="gn" style="fill:' + color + '">' + (value === null || value === undefined ? '–' : Math.round(value) + '%') + '</text>'
+    + '<text x="60" y="67" class="gl">' + esc(T('Room humidity')) + '</text></svg>';
+  return s;
+}
+
 function bar(title, share, color, text) {
   const p = Math.max(0, Math.min(100, Math.round(share * 100)));
   return '<div class="bar" style="--c:' + color + '"><span>' + esc(title) + '</span><div class="tr"><i style="width:' + p + '%"></i></div><b>' + esc(text) + '</b></div>';
@@ -63,11 +93,14 @@ function render() {
   const hc = room === null ? 'var(--grey)' : (room < 35 ? 'var(--warn)' : (room > 60 ? 'var(--bad)' : 'var(--ok)'));
   let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(on ? T('Online') + ' · ' + T('Updated') + ' ' + time(D.last) : T('Offline'))
     + '</span><em>' + esc(D.status || T('Offline')) + '</em></div>';
-  h += '<div class="big" style="--h:' + hc + '"><b>' + num(room, 0, ' %') + '</b><span>' + esc(T('Room humidity')) + (on ? ' · ' + esc(T('Target')) + ' ' + D.target + ' %' : '') + '</span></div>';
-  h += '<div class="mi"><div><span>' + esc(T('Temperature')) + '</span><b>' + (on ? num(D.temperature, 1, ' °C') : '–') + '</b></div>'
-    + '<div><span>' + esc(T('Humidity at the device')) + '</span><b>' + (on ? num(D.device, 0, ' %') : '–') + '</b></div>'
-    + '<div><span>' + esc(T('Fan')) + '</span><b>' + (on && D.mode > 0 && D.fan !== null ? esc(T('Level')) + ' ' + D.fan : '–') + '</b></div>'
-    + (D.dust !== null && D.dust !== undefined ? '<div><span>' + esc(T('PM2.5')) + '</span><b>' + (on ? D.dust + ' µg/m³' : '–') + '</b></div>' : '') + '</div>';
+  // humidity gauge (semicircle 0–100 %, comfort band 40–60 %, target marker) + values
+  const mini = (icon, label, value) => '<div><span>' + ICON[icon] + esc(label) + '</span><b>' + value + '</b></div>';
+  h += '<div class="top"><div class="gg">' + gauge(room, on ? D.target : null, hc) + '</div><div class="mi">'
+    + mini('temp', T('Temperature'), on ? num(D.temperature, 1, ' °C') : '–')
+    + mini('drop', T('Humidity at the device'), on ? num(D.device, 0, ' %') : '–')
+    + mini('fan', T('Fan'), on && D.mode > 0 && D.fan !== null ? esc(T('Level')) + ' ' + D.fan : '–')
+    + (D.dust !== null && D.dust !== undefined ? mini('dust', T('PM2.5'), on ? D.dust + ' µg/m³' : '–') : mini('target', T('Target'), on ? D.target + ' %' : '–'))
+    + '</div></div>';
   // operation
   let sg = '';
   [[0, 'Off'], [1, 'Auto'], [2, 'Sleep'], [3, '1'], [4, '2'], [5, '3']].forEach(([m, t]) => { sg += btn('data-mode="' + m + '"', T(t), on && D.mode === m); });

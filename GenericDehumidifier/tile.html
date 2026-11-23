@@ -10,7 +10,7 @@
 html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 *{box-sizing:border-box}
 .vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
-.in{height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:.5em;padding:42px 4px 2px;font-size:clamp(12px,min(5cqw,8cqh),18px);line-height:1.25;overflow:hidden}
+.in{height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:.5em;padding:44px 14px 10px;font-size:clamp(12px,min(5cqw,8cqh),18px);line-height:1.25;overflow:hidden}
 .hd{display:flex;align-items:center;gap:.5em;font-weight:600}
 .hd i{width:.6em;height:.6em;border-radius:50%;background:var(--c);flex:none}
 .hd em{margin-left:auto;font-style:normal;font-size:.75em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:1em;padding:.1em .7em}
@@ -18,6 +18,9 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 .ct{display:flex;gap:.35em;flex-wrap:wrap}
 button{font:inherit;font-size:.85em;color:var(--fg);background:var(--box);border:1px solid var(--line);border-radius:7px;padding:.35em .9em;cursor:pointer}
 button.on{background:var(--acc);color:#fff;font-weight:600}
+.hb{position:relative;height:.45em;border-radius:.25em;background:var(--line)}
+.hb i{position:absolute;left:0;top:0;bottom:0;border-radius:.25em}.hb .cf{position:absolute;left:40%;width:20%;top:0;bottom:0;background:color-mix(in srgb,var(--ok) 22%,transparent)}
+.hb b{position:absolute;top:-.25em;width:.2em;height:.95em;margin-left:-.1em;border-radius:.1em;background:var(--fg)}
 .gr{margin-top:auto;font-size:max(11px,.75em);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
@@ -35,6 +38,12 @@ function render() {
   let h = '<div class="hd" style="--c:' + c + '"><i></i><span>' + esc(T('Dehumidifier')) + '</span><em>' + esc(D.status) + '</em></div>';
   h += '<div class="big"><b>' + (D.hasHumidity && D.humidity !== null ? Math.round(D.humidity) + ' %' : '–') + '</b><span>' + esc(T('Room humidity'))
     + (D.target > 0 ? ' · ' + esc(T('Target')) + ' ' + D.target + ' %' : '') + '</span></div>';
+  if (D.hasHumidity && D.humidity !== null) {
+    const hum = Math.max(0, Math.min(100, D.humidity));
+    const hc = D.target > 0 && hum > D.target ? 'var(--warn)' : 'var(--ok)';
+    h += '<div class="hb"><span class="cf"></span><i style="width:' + hum + '%;background:' + hc + '"></i>'
+      + (D.target > 0 ? '<b style="left:' + D.target + '%"></b>' : '') + '</div>';
+  }
   h += '<div class="ct"><button data-p="1"' + (D.on ? ' class="on"' : '') + '>' + esc(T('On')) + '</button><button data-p="0"' + (!D.on ? ' class="on"' : '') + '>'
     + esc(T('Off')) + '</button><button data-a="1"' + (D.auto ? ' class="on"' : '') + '>' + esc(T('Automation')) + '</button></div>';
   h += '<div class="gr">' + esc(D.reason) + '</div>';

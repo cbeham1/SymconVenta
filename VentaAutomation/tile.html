@@ -12,7 +12,7 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 /* main tile: season on the left (or top), all devices on the right (or below); sizes in em grow with the tile */
 .vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
 /* top space for the tile title of the visualization */
-.in{height:100%;display:grid;grid-template-columns:minmax(15em,30%) 1fr;gap:.9em;padding:42px 4px 2px;font-size:clamp(12px,min(1.5cqw,3.4cqh),19px);line-height:1.3;overflow:hidden}
+.in{height:100%;display:grid;grid-template-columns:minmax(15em,30%) 1fr;gap:.9em;padding:44px 14px 10px;font-size:clamp(12px,min(1.5cqw,3.4cqh),19px);line-height:1.3;overflow:hidden}
 /* narrow tiles: season on top, devices below, larger font */
 @container (max-width:1000px){.in{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow:auto;font-size:clamp(12px,min(2.3cqw,4cqh),17px)}.ck{display:grid;grid-template-columns:1fr 1fr;gap:.3em}}
 .col{display:flex;flex-direction:column;gap:.45em;min-height:0;min-width:0}
@@ -34,6 +34,10 @@ button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(
 .sg button.on{background:var(--acc)}
 .cp{display:flex;flex-wrap:wrap;gap:.3em}.cp span{font-size:.72em;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border-radius:1em;padding:.1em .55em;white-space:nowrap}
 .dis{opacity:.45;pointer-events:none}
+.hb{position:relative;height:.45em;border-radius:.25em;background:var(--track);margin:.1em 0 .15em}
+.hb i{position:absolute;left:0;top:0;bottom:0;border-radius:.25em}.hb .cf{position:absolute;left:40%;width:20%;top:0;bottom:0;background:color-mix(in srgb,var(--ok) 22%,transparent)}
+.hb b{position:absolute;top:-.25em;width:.2em;height:.95em;margin-left:-.1em;border-radius:.1em;background:var(--fg)}
+.dv{background:linear-gradient(160deg,var(--box),transparent)}
 </style>
 </head>
 <body>
@@ -71,6 +75,9 @@ function device(d) {
   let h = '<div class="dn"><b>' + esc(d.name) + '</b><span>' + esc(d.kindText || '') + '</span></div>';
   h += '<div class="dh" style="--h:' + hc + '"><b>' + (hum === null ? '–' : hum + ' %') + '</b><span>' + esc(on ? (d.status || '') : T('Offline'))
     + (on && d.target > 0 ? ' · ' + esc(T('Target')) + ' ' + d.target + ' %' : '') + '</span></div>';
+  // humidity bar 0–100 % with comfort band 40–60 % and target marker
+  h += '<div class="hb"><span class="cf"></span><i style="width:' + (hum === null ? 0 : hum) + '%;background:' + hc + '"></i>'
+    + (on && d.target > 0 ? '<b style="left:' + d.target + '%"></b>' : '') + '</div>';
   const modes = d.dehum ? [[0, 'Off'], [1, 'On']] : [[0, 'Off'], [1, 'Auto'], [2, 'Sleep']];
   h += '<div class="sg' + (on ? '' : ' dis') + '">' + modes.map(([m, t]) => '<button data-id="' + d.id + '" data-mode="' + m + '"' + (on && d.mode === m ? ' class="on"' : '') + '>' + esc(T(t)) + '</button>').join('') + '</div>';
   const chips = [];
