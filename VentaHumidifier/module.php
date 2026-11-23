@@ -81,11 +81,11 @@ class VentaHumidifier extends IPSModule
     {
         parent::ApplyChanges();
 
-        $this->RegisterProfiles();
-        $this->MaintainVariables();
         if ($this->ReadPropertyInteger('Protocol') !== self::PROTOCOL_AUTO) {
             $this->WriteAttributeInteger('DetectedProtocol', $this->ReadPropertyInteger('Protocol'));
         }
+        $this->RegisterProfiles();
+        $this->MaintainVariables();
         if ($this->ReadPropertyString('Host') === '') {
             $this->SetTimerInterval('Update', 0);
             $this->SetStatus(self::STATUS_NO_HOST);
@@ -845,8 +845,10 @@ class VentaHumidifier extends IPSModule
         $this->EnableAction('Mode');
         $this->RegisterVariableInteger('TargetHumidity', $this->Translate('Target humidity'), 'VENTA.Target', 11);
         $this->EnableAction('TargetHumidity');
-        $this->MaintainVariable('LED', $this->Translate('LED strip'), VARIABLETYPE_BOOLEAN, '~Switch', 12, $this->ReadAttributeBoolean('HasLED'));
-        if ($this->ReadAttributeBoolean('HasLED')) {
+        // all v2 devices (LW73/74, LP73/74) have the LED strip -> variable exists before the first contact
+        $hasLed = $this->ReadAttributeBoolean('HasLED') || $this->ReadAttributeInteger('DetectedProtocol') === self::PROTOCOL_V2;
+        $this->MaintainVariable('LED', $this->Translate('LED strip'), VARIABLETYPE_BOOLEAN, '~Switch', 12, $hasLed);
+        if ($hasLed) {
             $this->EnableAction('LED');
         }
         $new = @$this->GetIDForIdent('Automatic') === false;

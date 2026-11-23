@@ -11,12 +11,14 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 *{box-sizing:border-box}
 /* all sizes in em: the font grows with the tile */
 .vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
-.in{height:100%;display:flex;flex-direction:column;gap:.45em;padding:2px 4px;font-size:clamp(12px,min(4.2cqw,6.5cqh),18px);line-height:1.25;overflow:hidden}
+/* top space for the tile title of the visualization; content spreads over the full height */
+.in{height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:.3em;padding:42px 4px 2px;font-size:clamp(11px,min(3cqw,3.9cqh),20px);line-height:1.25;overflow:hidden}
 .hd{display:flex;align-items:center;gap:.5em;font-weight:600}
 .hd i{width:.6em;height:.6em;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 .22em color-mix(in srgb,var(--c) 25%,transparent)}
 .hd span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hd em{margin-left:auto;font-style:normal;font-size:.75em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:1em;padding:.1em .7em;white-space:nowrap}
-.big{display:flex;align-items:baseline;gap:.5em}.big b{font-size:2.4em;font-weight:700;line-height:1.05;color:var(--h)}.big span{color:var(--sub);font-size:.85em}
+.big{display:flex;align-items:baseline;gap:.5em}.big b{font-size:2.6em;font-weight:700;line-height:1;color:var(--h)}.big span{color:var(--sub);font-size:.85em}
+.mi div,.sg,button{border-radius:9px}
 .mi{display:grid;grid-template-columns:repeat(auto-fit,minmax(5.5em,1fr));gap:.35em}
 .mi div{display:flex;flex-direction:column;background:var(--box);border-radius:8px;padding:.3em .55em;min-width:0}
 .mi span{color:var(--sub);font-size:max(11px,.72em);white-space:nowrap}.mi b{font-size:1.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -30,7 +32,8 @@ button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(
 .dis{opacity:.4;pointer-events:none}
 .bar{display:grid;grid-template-columns:6.5em 1fr auto;align-items:center;gap:.5em;font-size:.82em}.bar span{color:var(--sub)}
 .tr{height:.5em;border-radius:.25em;background:var(--track);overflow:hidden}.tr i{display:block;height:100%;border-radius:.25em;background:var(--c)}
-.gr{margin-top:auto;font-size:max(11px,.75em);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gr{font-size:max(11px,.75em);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt{display:flex;flex-direction:column;gap:.35em}
 </style>
 </head>
 <body>
@@ -73,12 +76,14 @@ function render() {
   h += '<div class="ct' + (on ? '' : ' dis') + '"><div class="sg">' + sg + '</div><div class="sg zg">' + zg + '</div>'
     + btn('data-auto="1"', T('Automation'), D.auto) + (D.led === null ? '' : btn('data-led="1"', T('LED'), !!D.led)) + '</div>';
   // water and maintenance
-  if (D.water !== null && D.tank > 0) h += bar(T('Water'), on ? D.water / D.tank : 0, D.shortage ? 'var(--warn)' : 'var(--blue)', on ? num(D.water, 1, ' l') : '–');
-  else h += '<div class="bar" style="--c:var(--blue)"><span>' + esc(T('Water')) + '</span><b style="grid-column:2/4">' + esc(!on ? '–' : (D.shortage ? T('refill') : (D.stageText || '–'))) + '</b></div>';
+  let m = '';
+  if (D.water !== null && D.tank > 0) m += bar(T('Water'), on ? D.water / D.tank : 0, D.shortage ? 'var(--warn)' : 'var(--blue)', on ? num(D.water, 1, ' l') : '–');
+  else m += '<div class="bar" style="--c:var(--blue)"><span>' + esc(T('Water')) + '</span><b style="grid-column:2/4">' + esc(!on ? '–' : (D.shortage ? T('refill') : (D.stageText || '–'))) + '</b></div>';
   const mc = (r, warn) => r <= 0 ? 'var(--bad)' : (r <= warn ? 'var(--warn)' : 'var(--ok)');
-  h += bar(T('Hygiene disc'), D.disc / Math.max(1, D.discInterval), mc(D.disc, 7), D.disc <= 0 ? T('due') : D.disc + ' ' + T('days'));
-  h += bar(T('Cleaning'), D.cleaning / Math.max(1, D.cleaningInterval), mc(D.cleaning, 1), D.cleaning <= 0 ? T('due') : D.cleaning + ' ' + T('days'));
-  h += '<div class="ct">' + btn('data-reset="ResetCleaning"', T('Cleaned')) + btn('data-reset="ResetDisc"', T('Disc changed')) + '</div>';
+  m += bar(T('Hygiene disc'), D.disc / Math.max(1, D.discInterval), mc(D.disc, 7), D.disc <= 0 ? T('due') : D.disc + ' ' + T('days'));
+  m += bar(T('Cleaning'), D.cleaning / Math.max(1, D.cleaningInterval), mc(D.cleaning, 1), D.cleaning <= 0 ? T('due') : D.cleaning + ' ' + T('days'));
+  m += '<div class="ct">' + btn('data-reset="ResetCleaning"', T('Cleaned')) + btn('data-reset="ResetDisc"', T('Disc changed')) + '</div>';
+  h += '<div class="mt">' + m + '</div>';
   const warn = on && D.warnings && D.warnings !== T('none') ? T('Warnings') + ': ' + D.warnings + ' · ' : '';
   h += '<div class="gr">' + esc(D.kind) + ' · ' + esc(warn) + esc(on ? D.reason : T('last reached') + ' ' + (D.last > 0 ? date(D.last) : T('never'))) + '</div>';
   $('in').innerHTML = h;
