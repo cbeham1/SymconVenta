@@ -188,7 +188,16 @@ class VentaAutomation extends IPSModule
         $list = [];
         foreach ($this->DeviceIDs() as $id) {
             $dehum = $this->IsDehumidifier($id);
-            $s = json_decode($dehum ? VENTAD_GetState($id) : VENTA_GetState($id), true) ?: [];
+            // devices may be reloading (module update, kernel start) -> skip their state instead of warnings
+            if (IPS_GetKernelRunlevel() !== KR_READY || IPS_GetInstance($id)['InstanceStatus'] < IS_ACTIVE) {
+                $s = [];
+            } else {
+                try {
+                    $s = json_decode((string) @($dehum ? VENTAD_GetState($id) : VENTA_GetState($id)), true) ?: [];
+                } catch (Throwable $e) {
+                    $s = [];
+                }
+            }
             $s['id'] = $id;
             $s['dehum'] = $dehum;
             $s['name'] = IPS_GetName($id);
