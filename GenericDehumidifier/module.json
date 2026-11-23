@@ -1,0 +1,15 @@
+{
+    "id": "{4EB72E04-B9DD-4228-A16E-B42059465F51}",
+    "name": "Generic Dehumidifier",
+    "type": 3,
+    "vendor": "",
+    "aliases": [
+        "Luftentfeuchter (generisch)",
+        "Dehumidifier (switch)"
+    ],
+    "url": "https://github.com/cbeham1/SymconVenta/blob/main/GenericDehumidifier/README.md",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "VENTAD"
+}

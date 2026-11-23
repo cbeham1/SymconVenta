@@ -89,7 +89,27 @@
             "last reached": "zuletzt erreicht",
             "never": "nie",
             "Stage": "Stufe",
-            "Season automation off – device is not switched": "Saisonautomatik aus – Gerät wird nicht automatisch geschaltet"
+            "Season automation off – device is not switched": "Saisonautomatik aus – Gerät wird nicht automatisch geschaltet",
+            "Device kind": "Geräteart",
+            "Automatic (from the device type)": "Automatisch (aus dem Gerätetyp)",
+            "Humidifier": "Luftbefeuchter",
+            "Air washer": "Luftwäscher",
+            "Air purifier": "Luftreiniger",
+            "Air purifier (not controlled by the season automation)": "Luftreiniger (nicht von der Saisonautomatik gesteuert)",
+            "Air purifier – not controlled by the season automation": "Luftreiniger – nicht von der Saisonautomatik gesteuert",
+            "Warnings": "Warnungen",
+            "none": "keine",
+            "Fine dust PM2.5": "Feinstaub PM2.5",
+            "PM2.5": "PM2.5",
+            "Water low soon": "Wasser bald leer",
+            "Door open": "Tür offen",
+            "Clean the filter": "Filter reinigen",
+            "Check the water inlet": "Wasserzulauf prüfen",
+            "Service due": "Service fällig",
+            "low (yellow)": "niedrig (gelb)",
+            "empty (red)": "leer (rot)",
+            "OK": "OK",
+            "overflow": "Überlauf"
         }
     }
 }

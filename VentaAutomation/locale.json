@@ -57,7 +57,26 @@
             "Off from": "Aus ab",
             "not configured": "nicht eingerichtet",
             "Target day": "Ziel Tag",
-            "Target night": "Ziel Nacht"
+            "Target night": "Ziel Nacht",
+            "Venta Humidifier or Generic Dehumidifier instance": "Instanz Venta Humidifier oder Generic Dehumidifier",
+            "Dehumidifiers may also run in the heating season": "Luftentfeuchter dürfen auch im Winterbetrieb laufen",
+            "Dehumidifiers: on above": "Luftentfeuchter: ein über",
+            "Heating season – dehumidifiers paused": "Winterbetrieb – Luftentfeuchter pausiert",
+            "Devices": "Geräte",
+            "Off": "Aus",
+            "Auto": "Auto",
+            "Sleep": "Schlaf",
+            "On": "Ein",
+            "Online": "Online",
+            "Offline": "Offline",
+            "Refill water": "Wasser nachfüllen",
+            "Disc": "Disc",
+            "Cleaning": "Reinigung",
+            "days": "Tage",
+            "due": "fällig",
+            "no devices – add them in the instance configuration": "keine Geräte – in der Instanzkonfiguration eintragen",
+            "Dehumidifier": "Luftentfeuchter",
+            "Tank full": "Tank voll"
         }
     }
 }

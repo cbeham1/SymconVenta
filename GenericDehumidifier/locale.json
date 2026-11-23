@@ -1,0 +1,43 @@
+{
+    "translations": {
+        "de": {
+            "Switch variable of the dehumidifier (boolean with action, e.g. smart plug)": "Schaltvariable des Entfeuchters (Boolean mit Aktion, z. B. Zwischenstecker)",
+            "Room humidity sensor": "Raumfeuchte-Sensor",
+            "Power measurement in W (optional, detects a full tank)": "Leistungsmessung in W (optional, erkennt vollen Tank)",
+            "Switched on but below this power for 10 minutes = tank full": "Eingeschaltet, aber 10 Minuten unter dieser Leistung = Tank voll",
+            "Update interval": "Aktualisierungsintervall",
+            "Notifications": "Benachrichtigungen",
+            "Push notification to tile visualization (optional)": "Push-Benachrichtigung an Kachel-Visualisierung (optional)",
+            "Script for notifications (optional, see README)": "Skript für Benachrichtigungen (optional, siehe README)",
+            "Tank full": "Tank voll",
+            "Design of the tile": "Design der Kachel",
+            "Automatic (design of the visualization)": "Automatisch (Design der Visualisierung)",
+            "Dark": "Dunkel",
+            "Light": "Hell",
+            "Update now": "Jetzt aktualisieren",
+            "Add this instance to the list of a Venta Automation instance to switch it by room humidity.": "Diese Instanz in die Liste einer Venta-Automation-Instanz eintragen, um sie nach Raumfeuchte zu schalten.",
+            "Ready": "Bereit",
+            "Please select the switch variable": "Bitte die Schaltvariable auswählen",
+            "Power": "Ein/Aus",
+            "Status": "Status",
+            "Automation": "Automatik",
+            "Automation reason": "Automatik-Begründung",
+            "Room humidity": "Raumfeuchte",
+            "Target humidity": "Ziel-Luftfeuchte",
+            "Tank full or device in standby – please empty": "Tank voll oder Gerät im Standby – bitte leeren",
+            "Running": "Läuft",
+            "Off": "Aus",
+            "On": "Ein",
+            "Automation off – device is not switched": "Automatik aus – Gerät wird nicht geschaltet",
+            "Automation off for this device": "Automatik für dieses Gerät aus",
+            "Operated manually – automation again at %s": "Manuell bedient – Automatik wieder ab %s",
+            "Not allowed now": "Derzeit nicht freigegeben",
+            "No humidity sensor configured": "Kein Feuchtesensor eingerichtet",
+            "Room humidity %.0f %% above %d %%": "Raumfeuchte %.0f %% über %d %%",
+            "Room humidity %.0f %% ok (target %d %%)": "Raumfeuchte %.0f %% in Ordnung (Ziel %d %%)",
+            "Target": "Ziel",
+            "Dehumidifier": "Luftentfeuchter",
+            "not configured": "nicht eingerichtet"
+        }
+    }
+}

@@ -14,13 +14,15 @@ class VentaAutomation extends IPSModule
 {
     private const ARCHIVE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
     private const HUMIDIFIER_GUID = '{441260F2-692F-42DC-8E58-635EAD4615C1}';
+    private const DEHUMIDIFIER_GUID = '{4EB72E04-B9DD-4228-A16E-B42059465F51}';
     // Ident => [caption, profile, default, position]
     private const SETTINGS = [
-        'TargetDay'   => ['Target humidity day', 'VENTAA.Target', 45, 10],
-        'TargetNight' => ['Target humidity night', 'VENTAA.Target', 50, 11],
-        'SeasonStart' => ['Heating season below (outdoor 24 h mean)', 'VENTAA.Temperature', 10, 12],
-        'SeasonEnd'   => ['Heating season ends above', 'VENTAA.Temperature', 14, 13],
-        'HumidityOff' => ['Off from room humidity (mould protection)', 'VENTAA.HumidityOff', 60, 14]
+        'TargetDay'        => ['Target humidity day', 'VENTAA.Target', 45, 10],
+        'TargetNight'      => ['Target humidity night', 'VENTAA.Target', 50, 11],
+        'SeasonStart'      => ['Heating season below (outdoor 24 h mean)', 'VENTAA.Temperature', 10, 12],
+        'SeasonEnd'        => ['Heating season ends above', 'VENTAA.Temperature', 14, 13],
+        'HumidityOff'      => ['Off from room humidity (mould protection)', 'VENTAA.HumidityOff', 60, 14],
+        'DehumidifyTarget' => ['Dehumidifiers: on above', 'VENTAA.HumidityOff', 60, 15]
     ];
 
     public function Create(): void
@@ -38,6 +40,7 @@ class VentaAutomation extends IPSModule
         $this->RegisterPropertyBoolean('DayValue', true);
         $this->RegisterPropertyInteger('UpdateInterval', 120);
         $this->RegisterPropertyInteger('TileTheme', 0);
+        $this->RegisterPropertyBoolean('DehumidifyInHeatingSeason', false);
 
         $this->RegisterAttributeBoolean('Season', false);
 
@@ -64,8 +67,31 @@ class VentaAutomation extends IPSModule
             }
         }
         $this->SetTimerInterval('Update', max(30, $this->ReadPropertyInteger('UpdateInterval')) * 1000);
+        // main tile: follow the state variables of the devices
+        foreach ($this->GetMessageList() as $sender => $messages) {
+            foreach ($messages as $message) {
+                $this->UnregisterMessage($sender, $message);
+            }
+        }
+        foreach ($this->DeviceIDs() as $id) {
+            foreach (['Online', 'Mode', 'Status', 'RoomHumidity', 'Power', 'Humidity', 'TankFull'] as $ident) {
+                $vid = @IPS_GetObjectIDByIdent($ident, $id);
+                if ($vid !== false) {
+                    $this->RegisterMessage($vid, VM_UPDATE);
+                }
+            }
+        }
         $this->SetStatus(IS_ACTIVE);
         $this->UpdateTile($this->Conditions());
+    }
+
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
+    {
+        // at most every 3 seconds
+        if ($Message === VM_UPDATE && microtime(true) - (float) $this->GetBuffer('TileUpdate') >= 3) {
+            $this->SetBuffer('TileUpdate', (string) microtime(true));
+            $this->UpdateTile($this->Conditions());
+        }
     }
 
     public function GetVisualizationTile(): string
@@ -76,6 +102,20 @@ class VentaAutomation extends IPSModule
 
     public function RequestAction($Ident, $Value): void
     {
+        if ($Ident === 'DeviceMode') {
+            // quick operation from the main tile: {"id": instance, "mode": 0..5} (dehumidifier: 0 off, 1 on)
+            $v = json_decode((string) $Value, true);
+            $id = (int) ($v['id'] ?? 0);
+            if (in_array($id, $this->DeviceIDs(), true)) {
+                if ($this->IsDehumidifier($id)) {
+                    VENTAD_SetPower($id, (int) ($v['mode'] ?? 0) > 0);
+                } else {
+                    VENTA_SetMode($id, (int) ($v['mode'] ?? 0));
+                }
+            }
+            $this->UpdateTile($this->Conditions());
+            return;
+        }
         if ($Ident === 'Active') {
             $this->SetValue('Active', (bool) $Value);
         } elseif (isset(self::SETTINGS[$Ident])) {
@@ -108,12 +148,17 @@ class VentaAutomation extends IPSModule
         }
         $this->SetValue('Reason', $this->GetValue('Active') ? $reason : $this->Translate('Automation off – devices are not switched'));
         $state = json_encode(['season' => $c['season'], 'mode' => $mode, 'target' => $c['target'], 'humidityOff' => $this->GetValue('HumidityOff'), 'reason' => $reason]);
+        $dehumidify = $this->ReadPropertyBoolean('DehumidifyInHeatingSeason') || !$c['season'];
+        $dehumState = json_encode(['season' => $c['season'], 'dehumidify' => $dehumidify, 'target' => (int) $this->GetValue('DehumidifyTarget'),
+            'reason'                        => $dehumidify ? '' : $this->Translate('Heating season – dehumidifiers paused')]);
         foreach ($this->DeviceIDs() as $id) {
-            if ($this->GetValue('Active')) {
-                VENTA_ApplyAutomation($id, $state);
-            } else {
+            $dehum = $this->IsDehumidifier($id);
+            if (!$this->GetValue('Active')) {
                 // only report the season (offline notifications), do not switch
-                VENTA_ApplyAutomation($id, json_encode(['season' => $c['season'], 'mode' => -1]));
+                $off = json_encode(['season' => $c['season'], 'mode' => -1]);
+                $dehum ? VENTAD_ApplyAutomation($id, $off) : VENTA_ApplyAutomation($id, $off);
+            } else {
+                $dehum ? VENTAD_ApplyAutomation($id, $dehumState) : VENTA_ApplyAutomation($id, $state);
             }
         }
         $this->UpdateTile($c);
@@ -125,11 +170,35 @@ class VentaAutomation extends IPSModule
         $ids = [];
         foreach (json_decode($this->ReadPropertyString('Devices'), true) ?: [] as $row) {
             $id = (int) ($row['InstanceID'] ?? 0);
-            if ($id > 0 && IPS_InstanceExists($id) && IPS_GetInstance($id)['ModuleInfo']['ModuleID'] === self::HUMIDIFIER_GUID) {
+            if ($id > 0 && IPS_InstanceExists($id) && in_array(IPS_GetInstance($id)['ModuleInfo']['ModuleID'], [self::HUMIDIFIER_GUID, self::DEHUMIDIFIER_GUID], true)) {
                 $ids[] = $id;
             }
         }
         return $ids;
+    }
+
+    private function IsDehumidifier(int $id): bool
+    {
+        return IPS_GetInstance($id)['ModuleInfo']['ModuleID'] === self::DEHUMIDIFIER_GUID;
+    }
+
+    /** Short state of all devices for the main tile. */
+    private function DeviceStates(): array
+    {
+        $list = [];
+        foreach ($this->DeviceIDs() as $id) {
+            $dehum = $this->IsDehumidifier($id);
+            $s = json_decode($dehum ? VENTAD_GetState($id) : VENTA_GetState($id), true) ?: [];
+            $s['id'] = $id;
+            $s['dehum'] = $dehum;
+            $s['name'] = IPS_GetName($id);
+            if ($dehum) {
+                $s['kindText'] = $this->Translate('Dehumidifier');
+                $s['mode'] = !empty($s['on']) ? 1 : 0;
+            }
+            $list[] = $s;
+        }
+        return $list;
     }
 
     private function Conditions(): array
@@ -216,7 +285,8 @@ class VentaAutomation extends IPSModule
         $translations = [];
         foreach (['Automation', 'ON', 'OFF', 'Heating season', 'Pause', 'Heating', 'Winter', 'Summer', 'Outdoor 24 h mean', 'Ventilation running',
             'Somebody at home', 'yes', 'no', 'Day – automatic', 'Night – sleep mode', 'Target', 'Sure?', 'Off from', 'not configured',
-            'Target day', 'Target night'] as $text) {
+            'Target day', 'Target night', 'Devices', 'Off', 'Auto', 'Sleep', 'On', 'Online', 'Offline', 'Refill water', 'Disc', 'Cleaning',
+            'days', 'due', 'no devices – add them in the instance configuration', 'Dehumidifier', 'Tank full'] as $text) {
             $translations[$text] = $this->Translate($text);
         }
         $vent = $c['ventValue'];
@@ -228,7 +298,8 @@ class VentaAutomation extends IPSModule
             'presence'         => $c['presence'], 'presenceConfigured' => $this->ReadPropertyInteger('PresenceVariable') > 0,
             'day'              => $c['day'], 'target' => $c['target'], 'targetDay' => (int) $this->GetValueOr('TargetDay', 45),
             'targetNight'      => (int) $this->GetValueOr('TargetNight', 50), 'humidityOff' => (int) $this->GetValueOr('HumidityOff', 60),
-            'reason'           => (string) $this->GetValueOr('Reason', ''), 'theme' => $this->ReadPropertyInteger('TileTheme'), 't' => $translations
+            'reason'           => (string) $this->GetValueOr('Reason', ''), 'theme' => $this->ReadPropertyInteger('TileTheme'), 't' => $translations,
+            'devices'          => $this->DeviceStates(), 'dehumTarget' => (int) $this->GetValueOr('DehumidifyTarget', 60)
         ];
     }
 }

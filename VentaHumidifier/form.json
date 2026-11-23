@@ -7,6 +7,29 @@
         },
         {
             "type": "Select",
+            "name": "DeviceKind",
+            "caption": "Device kind",
+            "options": [
+                {
+                    "caption": "Automatic (from the device type)",
+                    "value": 0
+                },
+                {
+                    "caption": "Humidifier",
+                    "value": 1
+                },
+                {
+                    "caption": "Air washer",
+                    "value": 2
+                },
+                {
+                    "caption": "Air purifier (not controlled by the season automation)",
+                    "value": 3
+                }
+            ]
+        },
+        {
+            "type": "Select",
             "name": "Protocol",
             "caption": "Protocol",
             "options": [

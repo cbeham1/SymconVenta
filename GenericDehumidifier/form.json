@@ -1,0 +1,96 @@
+{
+    "elements": [
+        {
+            "type": "SelectVariable",
+            "name": "SwitchVariable",
+            "caption": "Switch variable of the dehumidifier (boolean with action, e.g. smart plug)"
+        },
+        {
+            "type": "SelectVariable",
+            "name": "HumidityVariable",
+            "caption": "Room humidity sensor"
+        },
+        {
+            "type": "SelectVariable",
+            "name": "PowerVariable",
+            "caption": "Power measurement in W (optional, detects a full tank)"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "PowerThreshold",
+            "caption": "Switched on but below this power for 10 minutes = tank full",
+            "suffix": "W",
+            "digits": 1
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "UpdateInterval",
+            "caption": "Update interval",
+            "suffix": "s",
+            "minimum": 30
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Notifications",
+            "items": [
+                {
+                    "type": "SelectInstance",
+                    "name": "NotifyVisualization",
+                    "caption": "Push notification to tile visualization (optional)"
+                },
+                {
+                    "type": "SelectScript",
+                    "name": "NotifyScript",
+                    "caption": "Script for notifications (optional, see README)"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "NotifyTankFull",
+                    "caption": "Tank full"
+                }
+            ]
+        },
+        {
+            "type": "Select",
+            "name": "TileTheme",
+            "caption": "Design of the tile",
+            "options": [
+                {
+                    "caption": "Automatic (design of the visualization)",
+                    "value": 0
+                },
+                {
+                    "caption": "Dark",
+                    "value": 1
+                },
+                {
+                    "caption": "Light",
+                    "value": 2
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Update now",
+            "onClick": "VENTAD_Update($id);"
+        },
+        {
+            "type": "Label",
+            "caption": "Add this instance to the list of a Venta Automation instance to switch it by room humidity."
+        }
+    ],
+    "status": [
+        {
+            "code": 102,
+            "icon": "active",
+            "caption": "Ready"
+        },
+        {
+            "code": 201,
+            "icon": "inactive",
+            "caption": "Please select the switch variable"
+        }
+    ]
+}

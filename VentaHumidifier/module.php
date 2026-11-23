@@ -30,6 +30,11 @@ class VentaHumidifier extends IPSModule
     private const WATER_DELAY = 600;
     private const OFFLINE_NOTIFY = 7200;
     private const HUMIDITY_HYSTERESIS = 5.0;
+    // device types with PM2.5 sensor (Measure.Dust): LP60, LPH60, LW60, AP902, AH902
+    private const PM_TYPES = [1, 2, 3, 11, 12];
+    // v0 Measure.WaterLevel
+    private const WATER_STAGES = [0 => '–', 1 => 'low (yellow)', 2 => 'empty (red)', 3 => 'OK', 4 => 'overflow'];
+    private const KINDS = [1 => 'Humidifier', 2 => 'Air washer', 3 => 'Air purifier'];
     private const MODES = [0 => 'Off', 1 => 'Automatic', 2 => 'Sleep mode', 3 => 'Level 1', 4 => 'Level 2', 5 => 'Level 3'];
 
     public function Create(): void
@@ -44,6 +49,7 @@ class VentaHumidifier extends IPSModule
         $this->RegisterPropertyInteger('DiscInterval', 120);
         $this->RegisterPropertyInteger('CleaningInterval', 14);
         $this->RegisterPropertyInteger('TileTheme', 0);
+        $this->RegisterPropertyInteger('DeviceKind', 0);
         $this->RegisterPropertyInteger('NotifyVisualization', 0);
         $this->RegisterPropertyInteger('NotifyScript', 0);
         $this->RegisterPropertyBoolean('NotifyWater', true);
@@ -275,11 +281,15 @@ class VentaHumidifier extends IPSModule
     /** Compact state for the automation and scripts. */
     public function GetState(): string
     {
+        $dust = @$this->GetIDForIdent('Dust');
         return json_encode([
-            'online'   => $this->GetValue('Online'), 'mode' => $this->GetValue('Mode'), 'target' => $this->GetValue('TargetHumidity'),
-            'humidity' => $this->GetValue('RoomHumidity'), 'water' => $this->GetValue('WaterShortage'),
-            'disc'     => $this->GetValue('DiscRemaining'), 'cleaning' => $this->GetValue('CleaningRemaining')
-        ]);
+            'name'     => IPS_GetName($this->InstanceID), 'kind' => $this->Kind(), 'kindText' => $this->Translate(self::KINDS[$this->Kind()]),
+            'online'   => $this->GetValue('Online'), 'status' => $this->GetValue('Status'), 'mode' => $this->GetValue('Mode'),
+            'target'   => $this->GetValue('TargetHumidity'), 'humidity' => $this->GetValue('RoomHumidity'),
+            'water'    => $this->GetValue('WaterShortage'), 'warnings' => $this->GetValue('WarningText'),
+            'dust'     => $dust ? GetValue($dust) : null, 'auto' => $this->GetValue('Automatic'),
+            'disc'     => $this->GetValue('DiscRemaining'), 'cleaning' => $this->GetValue('CleaningRemaining'), 'reason' => $this->GetValue('Reason')
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -288,6 +298,9 @@ class VentaHumidifier extends IPSModule
 
     private function DecideAutomation(array $s): string
     {
+        if ($this->Kind() === 3) {
+            return $this->Translate('Air purifier – not controlled by the season automation');
+        }
         if (!$this->GetValue('Automatic')) {
             return $this->Translate('Automation off for this device');
         }
@@ -533,7 +546,10 @@ class VentaHumidifier extends IPSModule
         $target = $a['TargetHum'] ?? null;
         $water = $m['WaterLevel'] ?? null;
         $rpm = $m['FanRpm'] ?? null;
+        $dust = $m['Dust'] ?? null;
         return [
+            'deviceType' => (int) ($d['Header']['DeviceType'] ?? 0),
+            'dust'       => $this->Valid($dust) && $dust >= 0 && $dust < 1000 ? (int) $dust : null,
             'power'      => $power,
             'mode'       => !$power ? 0 : ($sleep ? 2 : ($auto ? 1 : 2 + max(1, min(3, $fan)))),
             'target'     => $this->Valid($target) && $target > 0 && $target < 100 ? (int) $target : null,
@@ -556,10 +572,19 @@ class VentaHumidifier extends IPSModule
     private function ApplyData(array $w): void
     {
         $now = time();
+        if ($w['deviceType'] > 0 && $w['deviceType'] !== $this->ReadAttributeInteger('DeviceType')) {
+            $this->WriteAttributeInteger('DeviceType', $w['deviceType']);
+            $this->MaintainVariables();
+        }
         if ($w['led'] !== null && !$this->ReadAttributeBoolean('HasLED')) {
             $this->WriteAttributeBoolean('HasLED', true);
             $this->MaintainVariables();
         }
+        if ($w['dust'] !== null && in_array($this->ReadAttributeInteger('DeviceType'), self::PM_TYPES, true)) {
+            $this->SetValueIfChanged('Dust', $w['dust']);
+        }
+        $flags = $this->WarningFlags($w['warnings']);
+        $this->SetValueIfChanged('WarningText', $flags === [] ? $this->Translate('none') : implode(', ', array_map([$this, 'Translate'], $flags)));
         $this->MaintainWaterVariables();
         $this->SetValueIfChanged('Online', true);
         $this->SetValue('LastResponse', $now);
@@ -598,8 +623,8 @@ class VentaHumidifier extends IPSModule
         }
         $this->WriteAttributeString('Estimate', json_encode($estimate));
 
-        // Water shortage: warning bit for at least 10 minutes while switched on
-        $shortage = $w['power'] && $w['warnings'] !== 0;
+        // Water shortage: bit 1 of the warnings (v0: tank red, v2: water) for at least 10 minutes while switched on
+        $shortage = $w['power'] && ($w['warnings'] & 1) === 1;
         if ($shortage && $this->ReadAttributeInteger('WaterSince') === 0) {
             $this->WriteAttributeInteger('WaterSince', $now);
         } elseif (!$shortage) {
@@ -615,6 +640,35 @@ class VentaHumidifier extends IPSModule
         }
         $status = $w['invalid'] ? 'Invalid values' : ($shortage ? 'Refill water' : ($w['power'] ? self::MODES[$w['mode']] : 'Off'));
         $this->SetValueIfChanged('Status', $this->Translate($status));
+    }
+
+    /** Warning bits (meaning as in the Home Assistant integration ha-venta). */
+    private function WarningFlags(int $warnings): array
+    {
+        $bits = $this->ReadAttributeInteger('DetectedProtocol') === self::PROTOCOL_V0
+            ? [1 => 'Refill water', 2 => 'Water low soon', 4 => 'Door open', 16 => 'Clean the filter', 32 => 'Change the hygiene disc', 64 => 'Clean the device', 128 => 'Check the water inlet', 256 => 'Service due']
+            : [1 => 'Refill water', 2 => 'Change the hygiene disc', 4 => 'Clean the device', 8 => 'Clean the filter', 16 => 'Service due', 32 => 'Change the hygiene disc', 64 => 'Clean the device', 128 => 'Check the water inlet'];
+        $flags = [];
+        foreach ($bits as $bit => $text) {
+            if (($warnings & $bit) !== 0 && !in_array($text, $flags, true)) {
+                $flags[] = $text;
+            }
+        }
+        return $flags;
+    }
+
+    /** 1 humidifier, 2 air washer, 3 air purifier – from the property or the device type reported by the device. */
+    private function Kind(): int
+    {
+        $kind = $this->ReadPropertyInteger('DeviceKind');
+        if ($kind > 0) {
+            return $kind;
+        }
+        $type = $this->ReadAttributeInteger('DeviceType');
+        if ($type === 11) {
+            return 3;
+        }
+        return in_array($type, [3, 4, 5, 6, 106, 107], true) ? 2 : 1;
     }
 
     /** Room humidity: room sensor if it changed within 24 h, otherwise the sensor of the device. */
@@ -729,6 +783,14 @@ class VentaHumidifier extends IPSModule
         IPS_SetVariableProfileIcon('VENTA.Online', 'Network');
         IPS_SetVariableProfileAssociation('VENTA.Online', 0, $this->Translate('Offline'), '', 0xe74c3c);
         IPS_SetVariableProfileAssociation('VENTA.Online', 1, $this->Translate('Online'), '', 0x2ecc71);
+        $this->Profile('VENTA.PM', VARIABLETYPE_INTEGER, 'Factory', ' µg/m³');
+        if (!IPS_VariableProfileExists('VENTA.WaterStage')) {
+            IPS_CreateVariableProfile('VENTA.WaterStage', VARIABLETYPE_INTEGER);
+        }
+        IPS_SetVariableProfileIcon('VENTA.WaterStage', 'Drops');
+        foreach (self::WATER_STAGES as $value => $text) {
+            IPS_SetVariableProfileAssociation('VENTA.WaterStage', $value, $this->Translate($text), '', [0 => -1, 1 => 0xf39c12, 2 => 0xe74c3c, 3 => 0x2ecc71, 4 => 0x5ec8e5][$value]);
+        }
     }
 
     private function Profile(string $name, int $type, string $icon, string $suffix, ?array $range = null, int $digits = 0): void
@@ -773,6 +835,15 @@ class VentaHumidifier extends IPSModule
         $this->RegisterVariableInteger('FanSpeed', $this->Translate('Fan level'), '', 26);
         $this->RegisterVariableInteger('FanRpm', $this->Translate('Fan speed'), '', 27);
         $this->RegisterVariableInteger('Warnings', $this->Translate('Warning code'), '', 28);
+        $this->RegisterVariableString('WarningText', $this->Translate('Warnings'), '', 34);
+        $this->MaintainVariable(
+            'Dust',
+            $this->Translate('Fine dust PM2.5'),
+            VARIABLETYPE_INTEGER,
+            'VENTA.PM',
+            35,
+            in_array($this->ReadAttributeInteger('DeviceType'), self::PM_TYPES, true)
+        );
         $this->RegisterVariableInteger('LastResponse', $this->Translate('Last response'), '~UnixTimestamp', 29);
         $this->RegisterVariableInteger('DiscChanged', $this->Translate('Hygiene disc changed'), '~UnixTimestampDate', 30);
         $this->RegisterVariableInteger('DiscRemaining', $this->Translate('Hygiene disc remaining'), 'VENTA.Days', 31);
@@ -784,7 +855,7 @@ class VentaHumidifier extends IPSModule
     {
         $protocol = $this->ReadAttributeInteger('DetectedProtocol');
         $this->MaintainVariable('WaterLevel', $this->Translate('Water level'), VARIABLETYPE_FLOAT, 'VENTA.Liter', 23, $protocol !== self::PROTOCOL_V0);
-        $this->MaintainVariable('WaterStage', $this->Translate('Water level (stage)'), VARIABLETYPE_INTEGER, '', 24, $protocol === self::PROTOCOL_V0);
+        $this->MaintainVariable('WaterStage', $this->Translate('Water level (stage)'), VARIABLETYPE_INTEGER, 'VENTA.WaterStage', 24, $protocol === self::PROTOCOL_V0);
     }
 
     private function SetValueIfChanged(string $ident, $value): void
@@ -813,7 +884,7 @@ class VentaHumidifier extends IPSModule
         $translations = [];
         foreach (['Off', 'Auto', 'Sleep', 'Target', 'Automation', 'LED', 'Temperature', 'Humidity at the device', 'Fan', 'Level',
             'Water', 'refill', 'Hygiene disc', 'Cleaning', 'days', 'due', 'Cleaned', 'Disc changed', 'Sure?', 'Room humidity',
-            'Online', 'Offline', 'Updated', 'last reached', 'never', 'Stage'] as $text) {
+            'Online', 'Offline', 'Updated', 'last reached', 'never', 'Stage', 'PM2.5', 'Warnings', 'none'] as $text) {
             $translations[$text] = $this->Translate($text);
         }
         return [
@@ -825,6 +896,9 @@ class VentaHumidifier extends IPSModule
             'disc'      => (int) $get('DiscRemaining'), 'discInterval' => $this->ReadPropertyInteger('DiscInterval'),
             'cleaning'  => (int) $get('CleaningRemaining'), 'cleaningInterval' => $this->ReadPropertyInteger('CleaningInterval'),
             'last'      => (int) $get('LastResponse'), 'reason' => (string) $get('Reason'),
+            'kind'      => $this->Translate(self::KINDS[$this->Kind()]), 'purifier' => $this->Kind() === 3,
+            'dust'      => $get('Dust'), 'warnings' => (string) $get('WarningText'),
+            'stageText' => $get('WaterStage') === null ? '' : $this->Translate(self::WATER_STAGES[(int) $get('WaterStage')] ?? '–'),
             'theme'     => $this->ReadPropertyInteger('TileTheme'), 't' => $translations
         ];
     }

@@ -16,6 +16,11 @@ class ValidationTest extends TestCaseSymconValidation
         $this->validateModule(__DIR__ . '/../VentaHumidifier');
     }
 
+    public function testValidateGenericDehumidifier(): void
+    {
+        $this->validateModule(__DIR__ . '/../GenericDehumidifier');
+    }
+
     public function testValidateVentaAutomation(): void
     {
         $this->validateModule(__DIR__ . '/../VentaAutomation');

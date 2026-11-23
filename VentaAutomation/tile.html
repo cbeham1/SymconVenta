@@ -4,22 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-:root{--ok:#2ecc71;--warn:#f39c12;--blue:#5ec8e5;--grey:#8a96a3;--acc:#2a9d8f}
+:root{--ok:#2ecc71;--warn:#f39c12;--bad:#e74c3c;--blue:#5ec8e5;--grey:#8a96a3;--acc:#2a9d8f}
 .vt{--fg:#e8edf2;--sub:#9aa5b1;--box:rgba(255,255,255,.045);--line:rgba(255,255,255,.08);--track:rgba(255,255,255,.1)}
 .vt.vl{--fg:#1f2933;--sub:#5b6672;--box:rgba(0,0,0,.035);--line:rgba(0,0,0,.08);--track:rgba(0,0,0,.08)}
 html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 *{box-sizing:border-box}
+/* main tile: season on the left (or top), all devices on the right (or below); sizes in em grow with the tile */
 .vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
-.in{height:100%;display:flex;flex-direction:column;gap:.4em;padding:2px 4px;font-size:clamp(12px,min(4.2cqw,6.5cqh),18px);line-height:1.25;overflow:hidden}
+.in{height:100%;display:grid;grid-template-columns:minmax(15em,30%) 1fr;gap:.8em;padding:2px 4px;font-size:clamp(12px,min(1.6cqw,3.2cqh),18px);line-height:1.25;overflow:hidden}
+@container (max-width:700px){.in{grid-template-columns:1fr;overflow:auto;font-size:clamp(12px,3.6cqw,17px)}}
+.col{display:flex;flex-direction:column;gap:.45em;min-height:0;min-width:0}
 .hd{display:flex;align-items:center;gap:.5em;font-weight:600}
 .hd i{width:.6em;height:.6em;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 .22em color-mix(in srgb,var(--c) 25%,transparent)}
-.hd em{margin-left:auto;font-style:normal;font-size:.75em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:1em;padding:.1em .7em}
+.hd em{margin-left:auto;font-style:normal;font-size:.75em;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:1em;padding:.1em .7em;white-space:nowrap}
 .ck{display:flex;flex-direction:column;gap:.3em;font-size:.85em}
 .ck div{display:flex;gap:.5em;align-items:center;background:var(--box);border-radius:8px;padding:.3em .55em}
-.ck i{width:.55em;height:.55em;border-radius:50%;background:var(--c);flex:none}.ck b{margin-left:auto;font-weight:600}
-button{font:inherit;font-size:.82em;color:var(--fg);background:var(--box);border:1px solid var(--line);border-radius:7px;padding:.3em .8em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ck i{width:.55em;height:.55em;border-radius:50%;background:var(--c);flex:none}.ck b{margin-left:auto;font-weight:600;white-space:nowrap}
+button{font:inherit;font-size:.82em;color:var(--fg);background:var(--box);border:1px solid var(--line);border-radius:7px;padding:.3em .8em;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+button:hover{background:var(--track)}
 button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(--warn);border-color:var(--warn)}
-.gr{margin-top:auto;font-size:max(11px,.75em);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gr{font-size:max(11px,.75em);color:var(--sub)}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(17em,1fr));gap:.5em;align-content:start;overflow:auto;min-height:0}
+.dv{background:var(--box);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:10px;padding:.45em .65em;display:flex;flex-direction:column;gap:.3em;min-width:0}
+.dn{display:flex;align-items:baseline;gap:.5em}.dn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dn span{margin-left:auto;font-size:.75em;color:var(--sub);white-space:nowrap}
+.dh{display:flex;align-items:baseline;gap:.5em}.dh b{font-size:1.7em;font-weight:700;line-height:1.05;color:var(--h)}.dh span{font-size:.8em;color:var(--sub)}
+.sg{display:flex;background:var(--box);border-radius:8px;padding:2px;gap:2px}.sg button{flex:1;border:0;background:transparent;padding:.3em .2em}
+.sg button.on{background:var(--acc)}
+.cp{display:flex;flex-wrap:wrap;gap:.3em}.cp span{font-size:.72em;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border-radius:1em;padding:.1em .55em;white-space:nowrap}
+.dis{opacity:.45;pointer-events:none}
 </style>
 </head>
 <body>
@@ -31,12 +43,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
 const T = k => (D.t && D.t[k]) || k;
 const act = (ident, value) => { if (typeof requestAction === 'function') requestAction(ident, value); };
 const row = (ok, text, value) => '<div style="--c:' + (ok ? 'var(--ok)' : 'var(--grey)') + '"><i></i><span>' + esc(text) + '</span><b>' + esc(value) + '</b></div>';
+const chip = (color, text) => '<span style="--c:' + color + '">' + esc(text) + '</span>';
 
-function render() {
-  if (!D) return;
+function season() {
   const color = !D.active ? 'var(--grey)' : (D.season ? 'var(--blue)' : 'var(--grey)');
-  const chip = !D.active ? T('Automation') + ' ' + T('OFF') : (D.season ? T('Heating season') : T('Pause'));
-  let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(T('Automation')) + '</span><em>' + esc(chip) + '</em></div>';
+  const state = !D.active ? T('Automation') + ' ' + T('OFF') : (D.season ? T('Heating season') : T('Pause'));
+  let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(T('Automation')) + '</span><em>' + esc(state) + '</em></div>';
   h += '<div><button id="main"' + (D.active ? ' class="on"' : '') + '>' + esc(T('Automation') + ': ' + (D.active ? T('ON') : T('OFF'))) + '</button></div>';
   h += '<div class="ck">'
     + row(D.winter, T('Heating'), D.winterConfigured ? (D.winter ? T('Winter') : T('Summer')) : T('not configured'))
@@ -46,7 +58,34 @@ function render() {
     + row(true, D.day ? T('Day – automatic') : T('Night – sleep mode'), T('Target') + ' ' + D.target + ' %')
     + '</div>';
   h += '<div class="gr">' + esc(D.reason) + ' · ' + esc(T('Off from')) + ' ' + D.humidityOff + ' %</div>';
-  $('in').innerHTML = h;
+  return '<div class="col">' + h + '</div>';
+}
+
+function device(d) {
+  const on = !!d.online;
+  const color = !on ? 'var(--bad)' : (d.water || d.tankFull ? 'var(--warn)' : (d.mode > 0 ? 'var(--ok)' : 'var(--grey)'));
+  const hum = on && d.humidity !== null && d.humidity !== undefined && d.humidity > 0 ? Math.round(d.humidity) : null;
+  const hc = hum === null ? 'var(--grey)' : (hum < 35 ? 'var(--warn)' : (hum > 60 ? 'var(--bad)' : 'var(--ok)'));
+  let h = '<div class="dn"><b>' + esc(d.name) + '</b><span>' + esc(d.kindText || '') + '</span></div>';
+  h += '<div class="dh" style="--h:' + hc + '"><b>' + (hum === null ? '–' : hum + ' %') + '</b><span>' + esc(on ? (d.status || '') : T('Offline'))
+    + (on && d.target > 0 ? ' · ' + esc(T('Target')) + ' ' + d.target + ' %' : '') + '</span></div>';
+  const modes = d.dehum ? [[0, 'Off'], [1, 'On']] : [[0, 'Off'], [1, 'Auto'], [2, 'Sleep']];
+  h += '<div class="sg' + (on ? '' : ' dis') + '">' + modes.map(([m, t]) => '<button data-id="' + d.id + '" data-mode="' + m + '"' + (on && d.mode === m ? ' class="on"' : '') + '>' + esc(T(t)) + '</button>').join('') + '</div>';
+  const chips = [];
+  if (d.water) chips.push(chip('var(--warn)', T('Refill water')));
+  if (d.tankFull) chips.push(chip('var(--warn)', T('Tank full')));
+  if (!d.dehum && d.disc !== undefined) chips.push(chip(d.disc <= 0 ? 'var(--bad)' : (d.disc <= 7 ? 'var(--warn)' : 'var(--grey)'), T('Disc') + ' ' + (d.disc <= 0 ? T('due') : d.disc + ' ' + T('days'))));
+  if (!d.dehum && d.cleaning !== undefined) chips.push(chip(d.cleaning <= 0 ? 'var(--bad)' : (d.cleaning <= 1 ? 'var(--warn)' : 'var(--grey)'), T('Cleaning') + ' ' + (d.cleaning <= 0 ? T('due') : d.cleaning + ' ' + T('days'))));
+  if (d.dust !== null && d.dust !== undefined && on) chips.push(chip('var(--grey)', 'PM2.5 ' + d.dust));
+  h += '<div class="cp">' + chips.join('') + '</div>';
+  return '<div class="dv" style="--c:' + color + '">' + h + '</div>';
+}
+
+function render() {
+  if (!D) return;
+  const list = (D.devices || []).map(device).join('');
+  $('in').innerHTML = season() + '<div class="col"><div class="hd" style="--c:var(--acc)"><i></i><span>' + esc(T('Devices')) + '</span></div>'
+    + '<div class="dl">' + (list || '<div class="gr">' + esc(T('no devices – add them in the instance configuration')) + '</div>') + '</div></div>';
 }
 
 function theme() {
@@ -62,7 +101,14 @@ function theme() {
 
 document.addEventListener('click', e => {
   const b = e.target.closest('button');
-  if (!b || b.id !== 'main') return;
+  if (!b) return;
+  if (b.dataset.id) {
+    const d = D.devices.find(x => String(x.id) === b.dataset.id);
+    if (d) { d.mode = parseInt(b.dataset.mode, 10); render(); }
+    act('DeviceMode', JSON.stringify({id: parseInt(b.dataset.id, 10), mode: parseInt(b.dataset.mode, 10)}));
+    return;
+  }
+  if (b.id !== 'main') return;
   // switching ON switches the devices automatically -> two steps
   if (!D.active && !b.classList.contains('ask')) {
     const text = b.textContent; b.classList.add('ask'); b.textContent = T('Sure?');
@@ -72,11 +118,7 @@ document.addEventListener('click', e => {
   D.active = !D.active; render(); act('Active', D.active);
 });
 
-function handleMessage(data) {
-  D = typeof data === 'string' ? JSON.parse(data) : data;
-  theme(); render();
-}
-
+function handleMessage(data) { D = typeof data === 'string' ? JSON.parse(data) : data; theme(); render(); }
 if (D) { theme(); render(); }
 </script>
 </body>

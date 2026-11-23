@@ -8,7 +8,7 @@
             "delete": true,
             "columns": [
                 {
-                    "caption": "Venta Humidifier instance",
+                    "caption": "Venta Humidifier or Generic Dehumidifier instance",
                     "name": "InstanceID",
                     "width": "auto",
                     "add": 0,
@@ -91,6 +91,11 @@
                     ]
                 }
             ]
+        },
+        {
+            "type": "CheckBox",
+            "name": "DehumidifyInHeatingSeason",
+            "caption": "Dehumidifiers may also run in the heating season"
         },
         {
             "type": "NumberSpinner",
