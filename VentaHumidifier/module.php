@@ -635,22 +635,23 @@ class VentaHumidifier extends IPSModule
         }
         $this->WriteAttributeString('Estimate', json_encode($estimate));
 
-        // Water shortage: bit 1 of the warnings (v0: tank red, v2: water) for at least 10 minutes while switched on
-        $shortage = $w['power'] && ($w['warnings'] & 1) === 1;
+        // Water shortage: bit 1 of the warnings (v0: tank red, v2: water) - shown also while switched off,
+        // notification only while switched on and after 10 minutes
+        $shortage = ($w['warnings'] & 1) === 1;
         if ($shortage && $this->ReadAttributeInteger('WaterSince') === 0) {
             $this->WriteAttributeInteger('WaterSince', $now);
         } elseif (!$shortage) {
             $this->WriteAttributeInteger('WaterSince', 0);
         }
         $this->SetValueIfChanged('WaterShortage', $shortage);
-        if ($shortage && $now - $this->ReadAttributeInteger('WaterSince') >= self::WATER_DELAY) {
+        if ($shortage && $w['power'] && $now - $this->ReadAttributeInteger('WaterSince') >= self::WATER_DELAY) {
             if ($this->ReadPropertyBoolean('NotifyWater')) {
                 $this->Notify('water', sprintf($this->Translate('Refill water (warning code %d)'), $w['warnings']));
             }
         } elseif (!$shortage) {
             $this->ClearNotification('water');
         }
-        $status = $w['invalid'] ? 'Invalid values' : ($shortage ? 'Refill water' : ($w['power'] ? self::MODES[$w['mode']] : 'Off'));
+        $status = $w['invalid'] ? 'Invalid values' : ($shortage && $w['power'] ? 'Refill water' : ($w['power'] ? self::MODES[$w['mode']] : 'Off'));
         $this->SetValueIfChanged('Status', $this->Translate($status));
     }
 

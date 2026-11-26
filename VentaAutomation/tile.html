@@ -85,8 +85,8 @@ function device(d) {
   const modes = d.dehum ? [[0, 'Off'], [1, 'On']] : [[0, 'Off'], [1, 'Auto'], [2, 'Sleep']];
   h += '<div class="sg' + (on ? '' : ' dis') + '">' + modes.map(([m, t]) => '<button data-id="' + d.id + '" data-mode="' + m + '"' + (on && d.mode === m ? ' class="on"' : '') + '>' + esc(T(t)) + '</button>').join('') + '</div>';
   const chips = [];
-  if (d.water) chips.push(chip('var(--warn)', T('Refill water')));
-  if (d.tankFull) chips.push(chip('var(--warn)', T('Tank full')));
+  if (on && d.water) chips.push(chip('var(--warn)', T('Refill water')));
+  if (on && d.tankFull) chips.push(chip('var(--warn)', T('Tank full')));
   if (!d.dehum && d.disc !== undefined) chips.push(chip(d.disc <= 0 ? 'var(--bad)' : (d.disc <= 7 ? 'var(--warn)' : 'var(--grey)'), T('Disc') + ' ' + (d.disc <= 0 ? T('due') : d.disc + ' ' + T('days'))));
   if (!d.dehum && d.cleaning !== undefined) chips.push(chip(d.cleaning <= 0 ? 'var(--bad)' : (d.cleaning <= 1 ? 'var(--warn)' : 'var(--grey)'), T('Cleaning') + ' ' + (d.cleaning <= 0 ? T('due') : d.cleaning + ' ' + T('days'))));
   if (d.dust !== null && d.dust !== undefined && on) chips.push(chip('var(--grey)', 'PM2.5 ' + d.dust));
