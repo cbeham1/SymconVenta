@@ -88,7 +88,7 @@ function bar(title, share, color, text) {
 function render() {
   if (!D) return;
   const on = D.online;
-  const color = !on ? 'var(--bad)' : (D.shortage ? 'var(--warn)' : (D.mode > 0 ? 'var(--ok)' : 'var(--grey)'));
+  const color = !on ? 'var(--bad)' : (D.shortage ? 'var(--bad)' : (D.mode > 0 ? 'var(--ok)' : 'var(--grey)'));
   const room = on ? D.room : null;
   const hc = room === null ? 'var(--grey)' : (room < 35 ? 'var(--warn)' : (room > 60 ? 'var(--bad)' : 'var(--ok)'));
   let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(on ? T('Online') + ' · ' + T('Updated') + ' ' + time(D.last) : T('Offline'))
@@ -110,8 +110,11 @@ function render() {
     + btn('data-auto="1"', T('Automation'), D.auto) + (D.led === null ? '' : btn('data-led="1"', T('LED'), !!D.led)) + '</div>';
   // water and maintenance
   let m = '';
-  if (D.water !== null && D.tank > 0) m += bar(T('Water'), on ? D.water / D.tank : 0, on && D.shortage ? 'var(--warn)' : 'var(--blue)', on ? num(D.water, 1, ' l') + (D.shortage ? ' · ' + T('refill') : '') : '–');
-  else m += '<div class="bar" style="--c:' + (on && D.shortage ? 'var(--warn)' : 'var(--blue)') + '"><span>' + esc(T('Water')) + '</span><b style="grid-column:2/4' + (on && D.shortage ? ';color:var(--warn)' : '') + '">' + esc(!on ? '–' : (D.shortage ? T('refill') : (D.stageText || '–'))) + '</b></div>';
+  if (D.water !== null && D.tank > 0) {
+    const wb = bar(T('Water'), on ? D.water / D.tank : 0, on && D.shortage ? 'var(--bad)' : 'var(--blue)', on ? num(D.water, 1, ' l') + (D.shortage ? ' · ' + T('refill') : '') : '–');
+    m += on && D.shortage ? wb.replace('<b>', '<b style="color:var(--bad)">') : wb;
+  }
+  else m += '<div class="bar" style="--c:' + (on && D.shortage ? 'var(--bad)' : 'var(--blue)') + '"><span>' + esc(T('Water')) + '</span><b style="grid-column:2/4' + (on && D.shortage ? ';color:var(--bad)' : '') + '">' + esc(!on ? '–' : (D.shortage ? T('refill') : (D.stageText || '–'))) + '</b></div>';
   const mc = (r, warn) => r <= 0 ? 'var(--bad)' : (r <= warn ? 'var(--warn)' : 'var(--ok)');
   m += bar(T('Hygiene disc'), D.disc / Math.max(1, D.discInterval), mc(D.disc, 7), D.disc <= 0 ? T('due') : D.disc + ' ' + T('days'));
   m += bar(T('Cleaning'), D.cleaning / Math.max(1, D.cleaningInterval), mc(D.cleaning, 1), D.cleaning <= 0 ? T('due') : D.cleaning + ' ' + T('days'));

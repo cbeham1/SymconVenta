@@ -73,7 +73,7 @@ function season() {
 
 function device(d) {
   const on = !!d.online;
-  const color = !on ? 'var(--bad)' : (d.water || d.tankFull ? 'var(--warn)' : (d.mode > 0 ? 'var(--ok)' : 'var(--grey)'));
+  const color = !on ? 'var(--bad)' : (d.water ? 'var(--bad)' : d.tankFull ? 'var(--warn)' : (d.mode > 0 ? 'var(--ok)' : 'var(--grey)'));
   const hum = on && d.humidity !== null && d.humidity !== undefined && d.humidity > 0 ? Math.round(d.humidity) : null;
   const hc = hum === null ? 'var(--grey)' : (hum < 35 ? 'var(--warn)' : (hum > 60 ? 'var(--bad)' : 'var(--ok)'));
   let h = '<div class="dn"><b>' + esc(d.name) + '</b><span>' + esc(d.kindText || '') + '</span></div>';
@@ -85,7 +85,7 @@ function device(d) {
   const modes = d.dehum ? [[0, 'Off'], [1, 'On']] : [[0, 'Off'], [1, 'Auto'], [2, 'Sleep']];
   h += '<div class="sg' + (on ? '' : ' dis') + '">' + modes.map(([m, t]) => '<button data-id="' + d.id + '" data-mode="' + m + '"' + (on && d.mode === m ? ' class="on"' : '') + '>' + esc(T(t)) + '</button>').join('') + '</div>';
   const chips = [];
-  if (on && d.water) chips.push(chip('var(--warn)', T('Refill water')));
+  if (on && d.water) chips.push(chip('var(--bad)', T('Refill water')));
   if (on && d.tankFull) chips.push(chip('var(--warn)', T('Tank full')));
   if (!d.dehum && d.disc !== undefined) chips.push(chip(d.disc <= 0 ? 'var(--bad)' : (d.disc <= 7 ? 'var(--warn)' : 'var(--grey)'), T('Disc') + ' ' + (d.disc <= 0 ? T('due') : d.disc + ' ' + T('days'))));
   if (!d.dehum && d.cleaning !== undefined) chips.push(chip(d.cleaning <= 0 ? 'var(--bad)' : (d.cleaning <= 1 ? 'var(--warn)' : 'var(--grey)'), T('Cleaning') + ' ' + (d.cleaning <= 0 ? T('due') : d.cleaning + ' ' + T('days'))));
