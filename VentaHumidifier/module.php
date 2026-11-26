@@ -160,6 +160,10 @@ class VentaHumidifier extends IPSModule
     public function Update(): bool
     {
         $this->SetTimerInterval('Update', max(30, $this->ReadPropertyInteger('UpdateInterval')) * 1000);
+        // 1.9: Symcon starts or shuts down -> no polling, no notification scripts (would block the shutdown)
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return false;
+        }
         if ($this->ReadPropertyString('Host') === '') {
             return false;
         }
@@ -747,6 +751,9 @@ class VentaHumidifier extends IPSModule
 
     private function Notify(string $key, string $text): void
     {
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return;
+        }
         $notified = json_decode($this->ReadAttributeString('Notified'), true) ?: [];
         if (isset($notified[$key])) {
             return;
@@ -768,6 +775,9 @@ class VentaHumidifier extends IPSModule
 
     private function ClearNotification(string $key): void
     {
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return;
+        }
         $notified = json_decode($this->ReadAttributeString('Notified'), true) ?: [];
         if (!isset($notified[$key])) {
             return;

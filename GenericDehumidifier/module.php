@@ -112,6 +112,10 @@ class GenericDehumidifier extends IPSModule
     /** Reads switch, humidity and power; detects a full tank (switched on, but no power for 10 minutes). */
     public function Update(): bool
     {
+        // 1.9: Symcon starts or shuts down -> no polling, no notification scripts (would block the shutdown)
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return false;
+        }
         $switch = $this->ReadPropertyInteger('SwitchVariable');
         $on = $switch > 0 && IPS_VariableExists($switch) && (bool) GetValue($switch);
         $this->SetValueIfChanged('Power', $on);
@@ -211,6 +215,9 @@ class GenericDehumidifier extends IPSModule
 
     private function Notify(string $key, string $text): void
     {
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return;
+        }
         $notified = json_decode($this->ReadAttributeString('Notified'), true) ?: [];
         if (isset($notified[$key])) {
             return;
@@ -231,6 +238,9 @@ class GenericDehumidifier extends IPSModule
 
     private function ClearNotification(string $key): void
     {
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return;
+        }
         $notified = json_decode($this->ReadAttributeString('Notified'), true) ?: [];
         if (!isset($notified[$key])) {
             return;
