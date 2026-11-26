@@ -13,8 +13,6 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 .vt{height:100%;container-type:size;color:var(--fg);font-family:"Segoe UI",Roboto,Arial,sans-serif}
 /* top space for the tile title of the visualization */
 .in{height:100%;display:grid;grid-template-columns:minmax(15em,30%) 1fr;gap:.9em;padding:44px 14px 10px;font-size:clamp(12px,min(1.5cqw,3.4cqh),19px);line-height:1.3;overflow:hidden}
-/* narrow tiles: season on top, devices below, larger font */
-@container (max-width:1000px){.in{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow:auto;font-size:clamp(12px,min(2.3cqw,4cqh),17px)}.ck{display:grid;grid-template-columns:1fr 1fr;gap:.3em}}
 .col{display:flex;flex-direction:column;gap:.45em;min-height:0;min-width:0}
 .hd{display:flex;align-items:center;gap:.5em;font-weight:600}
 .hd i{width:.6em;height:.6em;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 .22em color-mix(in srgb,var(--c) 25%,transparent)}
@@ -38,6 +36,11 @@ button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(
 .hb i{position:absolute;left:0;top:0;bottom:0;border-radius:.25em}.hb .cf{position:absolute;left:40%;width:20%;top:0;bottom:0;background:color-mix(in srgb,var(--ok) 22%,transparent)}
 .hb b{position:absolute;top:-.25em;width:.2em;height:.95em;margin-left:-.1em;border-radius:.1em;background:var(--fg)}
 .dv{background:linear-gradient(160deg,var(--box),transparent)}
+/* main switch sits in the header row */
+.hd button{margin-left:auto;font-weight:600}.hd em+button{margin-left:.4em}
+/* narrow tiles: season on top, devices below; conditions in two columns (must follow the base rules) */
+@container (max-width:1000px){.in{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:.6em;overflow:auto;font-size:clamp(12px,min(2.3cqw,4cqh),17px)}
+.ck{display:grid;grid-template-columns:1fr 1fr;gap:.3em}.ck div{padding:.2em .55em}.col{gap:.35em}}
 </style>
 </head>
 <body>
@@ -53,9 +56,10 @@ const chip = (color, text) => '<span style="--c:' + color + '">' + esc(text) + '
 
 function season() {
   const color = !D.active ? 'var(--grey)' : (D.season ? 'var(--blue)' : 'var(--grey)');
-  const state = !D.active ? T('Automation') + ' ' + T('OFF') : (D.season ? T('Heating season') : T('Pause'));
-  let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(T('Automation')) + '</span><em>' + esc(state) + '</em></div>';
-  h += '<div><button id="main"' + (D.active ? ' class="on"' : '') + '>' + esc(T('Automation') + ': ' + (D.active ? T('ON') : T('OFF'))) + '</button></div>';
+  // header row: state badge only while active, main switch on the right (was a separate row before)
+  let h = '<div class="hd" style="--c:' + color + '"><i></i><span>' + esc(T('Automation')) + '</span>'
+    + (D.active ? '<em>' + esc(D.season ? T('Heating season') : T('Pause')) + '</em>' : '')
+    + '<button id="main"' + (D.active ? ' class="on"' : '') + '>' + esc(D.active ? T('ON') : T('OFF')) + '</button></div>';
   h += '<div class="ck">'
     + row(D.winter, T('Heating'), D.winterConfigured ? (D.winter ? T('Winter') : T('Summer')) : T('not configured'))
     + row(D.tempOk, T('Outdoor 24 h mean') + ' (< ' + D.start + ' °C)', D.outdoor === null ? T('not configured') : D.outdoor.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' °C')
