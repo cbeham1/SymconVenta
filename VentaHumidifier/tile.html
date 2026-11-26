@@ -111,7 +111,7 @@ function render() {
   // water and maintenance
   let m = '';
   if (D.water !== null && D.tank > 0) {
-    const wb = bar(T('Water'), on ? D.water / D.tank : 0, on && D.shortage ? 'var(--bad)' : 'var(--blue)', on ? num(D.water, 1, ' l') + (D.shortage ? ' · ' + T('refill') : '') : '–');
+    const wb = bar(T('Water'), on && !D.shortage ? D.water / D.tank : 0, on && D.shortage ? 'var(--bad)' : 'var(--blue)', !on ? '–' : (D.shortage ? T('refill') : num(D.water, 1, ' l')));
     m += on && D.shortage ? wb.replace('<b>', '<b style="color:var(--bad)">') : wb;
   }
   else m += '<div class="bar" style="--c:' + (on && D.shortage ? 'var(--bad)' : 'var(--blue)') + '"><span>' + esc(T('Water')) + '</span><b style="grid-column:2/4' + (on && D.shortage ? ';color:var(--bad)' : '') + '">' + esc(!on ? '–' : (D.shortage ? T('refill') : (D.stageText || '–'))) + '</b></div>';

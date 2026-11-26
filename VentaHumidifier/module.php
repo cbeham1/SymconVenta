@@ -567,7 +567,7 @@ class VentaHumidifier extends IPSModule
             'target'     => $this->Valid($target) && $target > 0 && $target < 100 ? (int) $target : null,
             'humidity'   => $humidity,
             'temperature'=> $temperature,
-            'water'      => !$v0 && $this->Valid($water) ? round((float) $water / 10000, 1) : null,
+            'water'      => !$v0 && $this->Valid($water) ? ((((int) ($i['Warnings'] ?? 0)) & 1) === 1 ? 0.0 : round((float) $water / 10000, 1)) : null,
             'waterStage' => $v0 && $this->Valid($water) ? (int) $water : null,
             'fan'        => $this->Valid($fan) ? $fan : null,
             'rpm'        => $this->Valid($rpm) && $rpm < 10000 ? (int) $rpm : null,
