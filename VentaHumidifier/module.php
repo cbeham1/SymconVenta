@@ -423,11 +423,37 @@ class VentaHumidifier extends IPSModule
         } else {
             $ok = false;
         }
+        if (!$ok && $protocol === self::PROTOCOL_V0) {
+            // 1.10: v0 devices (LPH60) sometimes do not confirm a single field although it is applied -> read back
+            IPS_Sleep(1000);
+            $ok = $this->Confirmed($action);
+            $this->SendDebug('Send', 'read-back ' . ($ok ? 'matches' : 'differs'), 0);
+        }
         $this->SendDebug('Send', json_encode($action) . ' (' . $source . ') -> ' . ($ok ? 'OK' : 'FAILED'), 0);
         if (!$ok) {
             $this->LogMessage($this->Translate('Command failed') . ': ' . json_encode($action), KL_WARNING);
         }
         return $ok;
+    }
+
+    /** v0: reads the device and checks that the commanded fields are set (Automatic is skipped: sleep mode resets it on the LPH60). */
+    private function Confirmed(array $action): bool
+    {
+        $read = $this->Tcp(null);
+        $actual = $read['ok'] ? ($read['data']['Action'] ?? null) : null;
+        if (!is_array($actual)) {
+            return false;
+        }
+        $power = (bool) ($action['Power'] ?? ($actual['Power'] ?? false));
+        foreach (['Power', 'SleepMode', 'FanSpeed', 'TargetHum'] as $field) {
+            if (!array_key_exists($field, $action) || ($field !== 'Power' && !$power)) {
+                continue;
+            }
+            if (!array_key_exists($field, $actual) || (is_bool($action[$field]) ? (bool) $actual[$field] !== $action[$field] : (int) $actual[$field] !== (int) $action[$field])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** v2: HTTP POST /datastructure. */

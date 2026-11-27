@@ -49,6 +49,7 @@ accept only one field per command (handled by the module).
 
 ## Changelog
 
+* 1.10 – v0 devices (LPH60): a command without confirmation is read back; "Command failed" only if the device state really differs
 * 1.9 – no device polling and no notification scripts while Symcon starts or shuts down (a timer waiting for a notification script blocked the shutdown)
 * 1.4 – redesigned tiles: humidity gauge with comfort band and target marker, value grid with icons, boxed maintenance block, humidity bars in the main and dehumidifier tile
 * 1.3 – tiles leave room for the tile title, spread over the full height; LED variable for v2 devices before the first contact
