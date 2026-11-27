@@ -210,6 +210,61 @@ class VentaAutomation extends IPSModule
         return $list;
     }
 
+    /**
+     * 1.11: room humidity of the last 24 h per device (5-minute averages from the archive) for the chart in the main tile.
+     * Source: the room sensor configured at the device if it is logged, otherwise the room humidity variable of the device
+     * (logging is switched on once if necessary). Cached for 5 minutes – the tile is refreshed every few seconds.
+     */
+    private function History(): array
+    {
+        $cache = json_decode($this->GetBuffer('History'), true);
+        if (is_array($cache) && time() - (int) ($cache['time'] ?? 0) < 300) {
+            return $cache['series'];
+        }
+        $archives = IPS_GetInstanceListByModuleID(self::ARCHIVE_GUID);
+        if ($archives === [] || IPS_GetKernelRunlevel() !== KR_READY) {
+            return [];
+        }
+        $archive = $archives[0];
+        $series = [];
+        $changed = false;
+        foreach ($this->DeviceIDs() as $id) {
+            $vid = $this->HistoryVariable($archive, $id, $changed);
+            $points = [];
+            if ($vid > 0) {
+                $values = @AC_GetAggregatedValues($archive, $vid, 5, time() - 86400, time(), 0);
+                foreach (is_array($values) ? $values : [] as $v) {
+                    $points[] = [(int) $v['TimeStamp'], round((float) $v['Avg'], 1)];
+                }
+                usort($points, fn ($a, $b) => $a[0] <=> $b[0]);
+            }
+            $series[(string) $id] = $points;
+        }
+        if ($changed) {
+            AC_ApplyChanges($archive);
+        }
+        $this->SetBuffer('History', json_encode(['time' => time(), 'series' => $series]));
+        return $series;
+    }
+
+    private function HistoryVariable(int $archive, int $id, bool &$changed): int
+    {
+        $dehum = $this->IsDehumidifier($id);
+        $sensor = (int) @IPS_GetProperty($id, $dehum ? 'HumidityVariable' : 'RoomHumidityVariable');
+        if ($sensor > 0 && IPS_VariableExists($sensor) && @AC_GetLoggingStatus($archive, $sensor)) {
+            return $sensor;
+        }
+        $own = @IPS_GetObjectIDByIdent($dehum ? 'Humidity' : 'RoomHumidity', $id);
+        if ($own === false) {
+            return 0;
+        }
+        if (!@AC_GetLoggingStatus($archive, $own)) {
+            AC_SetLoggingStatus($archive, $own, true);
+            $changed = true;
+        }
+        return $own;
+    }
+
     private function Conditions(): array
     {
         $winterId = $this->ReadPropertyInteger('HeatingSeasonVariable');
@@ -295,7 +350,8 @@ class VentaAutomation extends IPSModule
         foreach (['Automation', 'ON', 'OFF', 'Heating season', 'Pause', 'Heating', 'Winter', 'Summer', 'Outdoor 24 h mean', 'Ventilation running',
             'Somebody at home', 'yes', 'no', 'Day – automatic', 'Night – sleep mode', 'Target', 'Sure?', 'Off from', 'not configured',
             'Target day', 'Target night', 'Devices', 'Off', 'Auto', 'Sleep', 'On', 'Online', 'Offline', 'Refill water', 'Disc', 'Cleaning',
-            'days', 'due', 'no devices – add them in the instance configuration', 'Dehumidifier', 'Tank full'] as $text) {
+            'days', 'due', 'no devices – add them in the instance configuration', 'Dehumidifier', 'Tank full',
+            'Room humidity – last 24 h', 'no history yet', 'Comfort 40–60 %'] as $text) {
             $translations[$text] = $this->Translate($text);
         }
         $vent = $c['ventValue'];
@@ -308,7 +364,8 @@ class VentaAutomation extends IPSModule
             'day'              => $c['day'], 'target' => $c['target'], 'targetDay' => (int) $this->GetValueOr('TargetDay', 45),
             'targetNight'      => (int) $this->GetValueOr('TargetNight', 50), 'humidityOff' => (int) $this->GetValueOr('HumidityOff', 60),
             'reason'           => (string) $this->GetValueOr('Reason', ''), 'theme' => $this->ReadPropertyInteger('TileTheme'), 't' => $translations,
-            'devices'          => $this->DeviceStates(), 'dehumTarget' => (int) $this->GetValueOr('DehumidifyTarget', 60)
+            'devices'          => $this->DeviceStates(), 'dehumTarget' => (int) $this->GetValueOr('DehumidifyTarget', 60),
+            'history'          => $this->History(), 'now' => time()
         ];
     }
 }

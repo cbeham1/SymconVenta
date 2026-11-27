@@ -36,6 +36,12 @@ button.on{background:var(--acc);color:#fff;font-weight:600}button.ask{color:var(
 .hb i{position:absolute;left:0;top:0;bottom:0;border-radius:.25em}.hb .cf{position:absolute;left:40%;width:20%;top:0;bottom:0;background:color-mix(in srgb,var(--ok) 22%,transparent)}
 .hb b{position:absolute;top:-.25em;width:.2em;height:.95em;margin-left:-.1em;border-radius:.1em;background:var(--fg)}
 .dv{background:linear-gradient(160deg,var(--box),transparent)}
+/* 1.11: humidity chart instead of the device cards */
+.ch{flex:1;min-height:8em;position:relative}.ch svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ch text{fill:var(--sub);font-size:11px}.ch .gl{stroke:var(--line)}.ch .cb{fill:color-mix(in srgb,var(--ok) 10%,transparent)}
+.ch .tl{stroke:var(--fg);stroke-dasharray:4 4;opacity:.45}.ch path{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lg{display:flex;flex-wrap:wrap;gap:.3em .9em;font-size:.82em}.lg span{display:flex;align-items:center;gap:.4em;white-space:nowrap}
+.lg i{width:.9em;height:.25em;border-radius:.15em;background:var(--c)}.lg b{font-weight:700}.lg em{font-style:normal;color:var(--sub)}
 /* main switch sits in the header row */
 .hd button{margin-left:auto;font-weight:600}.hd em+button{margin-left:.4em}
 /* narrow tiles: season on top, devices below; conditions in two columns (must follow the base rules) */
@@ -71,35 +77,68 @@ function season() {
   return '<div class="col">' + h + '</div>';
 }
 
-function device(d) {
-  const on = !!d.online;
-  const color = !on ? 'var(--bad)' : (d.water ? 'var(--bad)' : d.tankFull ? 'var(--warn)' : (d.mode > 0 ? 'var(--ok)' : 'var(--grey)'));
-  const hum = on && d.humidity !== null && d.humidity !== undefined && d.humidity > 0 ? Math.round(d.humidity) : null;
-  const hc = hum === null ? 'var(--grey)' : (hum < 35 ? 'var(--warn)' : (hum > 60 ? 'var(--bad)' : 'var(--ok)'));
-  let h = '<div class="dn"><b>' + esc(d.name) + '</b><span>' + esc(d.kindText || '') + '</span></div>';
-  h += '<div class="dh" style="--h:' + hc + '"><b>' + (hum === null ? '–' : hum + ' %') + '</b><span>' + esc(on ? (d.status || '') : T('Offline'))
-    + (on && d.target > 0 ? ' · ' + esc(T('Target')) + ' ' + d.target + ' %' : '') + '</span></div>';
-  // humidity bar 0–100 % with comfort band 40–60 % and target marker
-  h += '<div class="hb"><span class="cf"></span><i style="width:' + (hum === null ? 0 : hum) + '%;background:' + hc + '"></i>'
-    + (on && d.target > 0 ? '<b style="left:' + d.target + '%"></b>' : '') + '</div>';
-  const modes = d.dehum ? [[0, 'Off'], [1, 'On']] : [[0, 'Off'], [1, 'Auto'], [2, 'Sleep']];
-  h += '<div class="sg' + (on ? '' : ' dis') + '">' + modes.map(([m, t]) => '<button data-id="' + d.id + '" data-mode="' + m + '"' + (on && d.mode === m ? ' class="on"' : '') + '>' + esc(T(t)) + '</button>').join('') + '</div>';
-  const chips = [];
-  if (on && d.water) chips.push(chip('var(--bad)', T('Refill water')));
-  if (on && d.tankFull) chips.push(chip('var(--warn)', T('Tank full')));
-  if (!d.dehum && d.disc !== undefined) chips.push(chip(d.disc <= 0 ? 'var(--bad)' : (d.disc <= 7 ? 'var(--warn)' : 'var(--grey)'), T('Disc') + ' ' + (d.disc <= 0 ? T('due') : d.disc + ' ' + T('days'))));
-  if (!d.dehum && d.cleaning !== undefined) chips.push(chip(d.cleaning <= 0 ? 'var(--bad)' : (d.cleaning <= 1 ? 'var(--warn)' : 'var(--grey)'), T('Cleaning') + ' ' + (d.cleaning <= 0 ? T('due') : d.cleaning + ' ' + T('days'))));
-  if (d.dust !== null && d.dust !== undefined && on) chips.push(chip('var(--grey)', 'PM2.5 ' + d.dust));
-  h += '<div class="cp">' + chips.join('') + '</div>';
-  return '<div class="dv" style="--c:' + color + '">' + h + '</div>';
+const COLORS = ['#5ec8e5', '#2ecc71', '#f39c12', '#c678dd', '#e74c3c', '#8a96a3'];
+
+/* legend: one entry per device with its current room humidity */
+function legend() {
+  return '<div class="lg">' + (D.devices || []).map((d, i) => {
+    const on = !!d.online;
+    const hum = d.humidity !== null && d.humidity !== undefined && d.humidity > 0 ? Math.round(d.humidity) + ' %' : '–';
+    return '<span style="--c:' + COLORS[i % COLORS.length] + '"><i></i>' + esc(d.name) + ' <b>' + hum + '</b><em>'
+      + esc(on ? (d.status || '') : T('Offline')) + '</em></span>';
+  }).join('') + '</div>';
+}
+
+/* line chart 24 h, drawn in pixels of the chart box (re-drawn on resize) */
+function chart() {
+  const box = $('ch');
+  if (!box) return;
+  const W = box.clientWidth, H = box.clientHeight;
+  if (W < 50 || H < 40) return;
+  const now = D.now || Math.floor(Date.now() / 1000), t0 = now - 86400;
+  const series = (D.devices || []).map((d, i) => {
+    const pts = ((D.history || {})[String(d.id)] || []).filter(p => p[0] >= t0);
+    if (d.online && d.humidity > 0) pts.push([now, d.humidity]);
+    return {c: COLORS[i % COLORS.length], pts};
+  });
+  const all = series.flatMap(s => s.pts.map(p => p[1]));
+  let lo = Math.min(35, ...all, D.target || 50), hi = Math.max(65, ...all, D.target || 50);
+  lo = Math.floor((lo - 2) / 5) * 5; hi = Math.ceil((hi + 2) / 5) * 5;
+  const L = 30, R = 6, TP = 6, B = 18, pw = W - L - R, ph = H - TP - B;
+  const x = t => L + (t - t0) / 86400 * pw, y = v => TP + (hi - v) / (hi - lo) * ph;
+  let s = '<rect class="cb" x="' + L + '" width="' + pw + '" y="' + y(Math.min(60, hi)) + '" height="' + Math.max(0, y(Math.max(40, lo)) - y(Math.min(60, hi))) + '"/>';
+  for (let v = lo; v <= hi; v += (hi - lo > 30 ? 10 : 5)) {
+    s += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 4) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+  }
+  // hour labels every 6 h (full hours)
+  const first = Math.ceil(t0 / 3600) * 3600;
+  for (let t = first; t <= now; t += 3600) {
+    const h = new Date(t * 1000).getHours();
+    if (h % 6 === 0) s += '<line class="gl" x1="' + x(t) + '" x2="' + x(t) + '" y1="' + TP + '" y2="' + (TP + ph) + '"/><text x="' + x(t) + '" y="' + (H - 3) + '" text-anchor="middle">' + String(h).padStart(2, '0') + ':00</text>';
+  }
+  if (D.target > 0) s += '<line class="tl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(D.target) + '" y2="' + y(D.target) + '"/>';
+  series.forEach(sr => {
+    let d = '', prev = null;
+    sr.pts.forEach(p => {
+      // gap > 20 min (device offline, no data) -> new line segment
+      d += (prev === null || p[0] - prev > 1200 ? 'M' : 'L') + x(p[0]).toFixed(1) + ' ' + y(p[1]).toFixed(1);
+      prev = p[0];
+    });
+    if (d) s += '<path d="' + d + '" stroke="' + sr.c + '"/>';
+  });
+  if (!all.length) s += '<text x="' + (L + pw / 2) + '" y="' + (TP + ph / 2) + '" text-anchor="middle">' + esc(T('no history yet')) + '</text>';
+  box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">' + s + '</svg>';
 }
 
 function render() {
   if (!D) return;
-  const list = (D.devices || []).map(device).join('');
-  $('in').innerHTML = season() + '<div class="col"><div class="hd" style="--c:var(--acc)"><i></i><span>' + esc(T('Devices')) + '</span></div>'
-    + '<div class="dl">' + (list || '<div class="gr">' + esc(T('no devices – add them in the instance configuration')) + '</div>') + '</div></div>';
+  const has = (D.devices || []).length > 0;
+  $('in').innerHTML = season() + '<div class="col"><div class="hd" style="--c:var(--acc)"><i></i><span>' + esc(T('Room humidity – last 24 h')) + '</span>'
+    + (D.target > 0 ? '<em style="--c:var(--grey)">' + esc(T('Target')) + ' ' + D.target + ' %</em>' : '') + '</div>'
+    + (has ? '<div class="ch" id="ch"></div>' + legend() : '<div class="gr">' + esc(T('no devices – add them in the instance configuration')) + '</div>') + '</div>';
+  chart();
 }
+new ResizeObserver(() => chart()).observe(document.getElementById('in'));
 
 function theme() {
   const vt = $('vt');

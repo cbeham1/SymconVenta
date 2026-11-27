@@ -76,7 +76,10 @@
             "due": "fällig",
             "no devices – add them in the instance configuration": "keine Geräte – in der Instanzkonfiguration eintragen",
             "Dehumidifier": "Luftentfeuchter",
-            "Tank full": "Tank voll"
+            "Tank full": "Tank voll",
+            "Room humidity – last 24 h": "Raumfeuchte – letzte 24 h",
+            "no history yet": "noch kein Verlauf",
+            "Comfort 40–60 %": "Komfort 40–60 %"
         }
     }
 }
