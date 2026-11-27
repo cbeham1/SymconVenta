@@ -79,7 +79,9 @@
             "Tank full": "Tank voll",
             "Room humidity – last 24 h": "Raumfeuchte – letzte 24 h",
             "no history yet": "noch kein Verlauf",
-            "Comfort 40–60 %": "Komfort 40–60 %"
+            "Comfort 40–60 %": "Komfort 40–60 %",
+            "Room": "Raum",
+            "Device": "Gerät"
         }
     }
 }

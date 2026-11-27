@@ -49,6 +49,7 @@ accept only one field per command (handled by the module).
 
 ## Changelog
 
+* 1.12 – one chart per room side by side (common scale); the room sensor configured at the device has priority (main line), the humidity measured at the device is shown as a thin dashed line; logging is switched on for both if necessary
 * 1.11 – main tile of the automation shows the room humidity of all devices of the last 24 h as a chart instead of the device cards (archive, 5-minute averages; logging of the room humidity is switched on if no logged sensor is configured)
 * 1.10 – v0 devices (LPH60): a command without confirmation is read back; "Command failed" only if the device state really differs
 * 1.9 – no device polling and no notification scripts while Symcon starts or shuts down (a timer waiting for a notification script blocked the shutdown)

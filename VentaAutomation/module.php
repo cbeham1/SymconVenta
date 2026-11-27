@@ -200,6 +200,11 @@ class VentaAutomation extends IPSModule
             }
             $s['id'] = $id;
             $s['dehum'] = $dehum;
+            // 1.12: current room humidity from the room sensor (priority), humidity at the device separately
+            $sensor = (int) @IPS_GetProperty($id, $dehum ? 'HumidityVariable' : 'RoomHumidityVariable');
+            $s['room'] = $sensor > 0 && IPS_VariableExists($sensor) ? round((float) GetValue($sensor), 1) : ($s['humidity'] ?? null);
+            $device = @IPS_GetObjectIDByIdent('DeviceHumidity', $id);
+            $s['device'] = !$dehum && $device !== false && !empty($s['online']) ? GetValue($device) : null;
             $s['name'] = IPS_GetName($id);
             if ($dehum) {
                 $s['kindText'] = $this->Translate('Dehumidifier');
@@ -211,13 +216,13 @@ class VentaAutomation extends IPSModule
     }
 
     /**
-     * 1.11: room humidity of the last 24 h per device (5-minute averages from the archive) for the chart in the main tile.
-     * Source: the room sensor configured at the device if it is logged, otherwise the room humidity variable of the device
-     * (logging is switched on once if necessary). Cached for 5 minutes – the tile is refreshed every few seconds.
+     * 1.11/1.12: humidity of the last 24 h per device (5-minute averages from the archive) for the charts in the main tile.
+     * r = room: the room sensor configured at the device (priority), otherwise the room humidity variable of the device;
+     * d = humidity measured at the device. Logging is switched on once if necessary. Cached for 5 minutes.
      */
     private function History(): array
     {
-        $cache = json_decode($this->GetBuffer('History'), true);
+        $cache = json_decode($this->GetBuffer('History2'), true);
         if (is_array($cache) && time() - (int) ($cache['time'] ?? 0) < 300) {
             return $cache['series'];
         }
@@ -229,40 +234,52 @@ class VentaAutomation extends IPSModule
         $series = [];
         $changed = false;
         foreach ($this->DeviceIDs() as $id) {
-            $vid = $this->HistoryVariable($archive, $id, $changed);
-            $points = [];
-            if ($vid > 0) {
-                $values = @AC_GetAggregatedValues($archive, $vid, 5, time() - 86400, time(), 0);
-                foreach (is_array($values) ? $values : [] as $v) {
-                    $points[] = [(int) $v['TimeStamp'], round((float) $v['Avg'], 1)];
-                }
-                usort($points, fn ($a, $b) => $a[0] <=> $b[0]);
+            $dehum = $this->IsDehumidifier($id);
+            // 1.12: r = room (sensor has priority), d = humidity measured at the device
+            $room = $this->LoggedVariable($archive, (int) @IPS_GetProperty($id, $dehum ? 'HumidityVariable' : 'RoomHumidityVariable'), $changed);
+            if ($room === 0) {
+                $own = @IPS_GetObjectIDByIdent($dehum ? 'Humidity' : 'RoomHumidity', $id);
+                $room = $this->LoggedVariable($archive, $own === false ? 0 : $own, $changed);
             }
-            $series[(string) $id] = $points;
+            $device = @IPS_GetObjectIDByIdent('DeviceHumidity', $id);
+            $series[(string) $id] = [
+                'r' => $this->Points($archive, $room),
+                'd' => $dehum || $device === false ? [] : $this->Points($archive, $this->LoggedVariable($archive, $device, $changed))
+            ];
         }
         if ($changed) {
             AC_ApplyChanges($archive);
         }
-        $this->SetBuffer('History', json_encode(['time' => time(), 'series' => $series]));
+        $this->SetBuffer('History2', json_encode(['time' => time(), 'series' => $series]));
         return $series;
     }
 
-    private function HistoryVariable(int $archive, int $id, bool &$changed): int
+    /** Returns the variable if it exists; switches logging on if it is not logged yet (history starts from then on). */
+    private function LoggedVariable(int $archive, int $vid, bool &$changed): int
     {
-        $dehum = $this->IsDehumidifier($id);
-        $sensor = (int) @IPS_GetProperty($id, $dehum ? 'HumidityVariable' : 'RoomHumidityVariable');
-        if ($sensor > 0 && IPS_VariableExists($sensor) && @AC_GetLoggingStatus($archive, $sensor)) {
-            return $sensor;
-        }
-        $own = @IPS_GetObjectIDByIdent($dehum ? 'Humidity' : 'RoomHumidity', $id);
-        if ($own === false) {
+        if ($vid <= 0 || !IPS_VariableExists($vid)) {
             return 0;
         }
-        if (!@AC_GetLoggingStatus($archive, $own)) {
-            AC_SetLoggingStatus($archive, $own, true);
+        if (!@AC_GetLoggingStatus($archive, $vid)) {
+            AC_SetLoggingStatus($archive, $vid, true);
             $changed = true;
         }
-        return $own;
+        return $vid;
+    }
+
+    /** 5-minute averages of the last 24 h, oldest first. */
+    private function Points(int $archive, int $vid): array
+    {
+        if ($vid <= 0) {
+            return [];
+        }
+        $points = [];
+        $values = @AC_GetAggregatedValues($archive, $vid, 5, time() - 86400, time(), 0);
+        foreach (is_array($values) ? $values : [] as $v) {
+            $points[] = [(int) $v['TimeStamp'], round((float) $v['Avg'], 1)];
+        }
+        usort($points, fn ($a, $b) => $a[0] <=> $b[0]);
+        return $points;
     }
 
     private function Conditions(): array
@@ -351,7 +368,7 @@ class VentaAutomation extends IPSModule
             'Somebody at home', 'yes', 'no', 'Day – automatic', 'Night – sleep mode', 'Target', 'Sure?', 'Off from', 'not configured',
             'Target day', 'Target night', 'Devices', 'Off', 'Auto', 'Sleep', 'On', 'Online', 'Offline', 'Refill water', 'Disc', 'Cleaning',
             'days', 'due', 'no devices – add them in the instance configuration', 'Dehumidifier', 'Tank full',
-            'Room humidity – last 24 h', 'no history yet', 'Comfort 40–60 %'] as $text) {
+            'Room humidity – last 24 h', 'no history yet', 'Comfort 40–60 %', 'Room', 'Device'] as $text) {
             $translations[$text] = $this->Translate($text);
         }
         $vent = $c['ventValue'];
