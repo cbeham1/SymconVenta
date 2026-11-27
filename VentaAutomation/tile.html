@@ -90,8 +90,9 @@ const roomName = n => String(n || '').split(' – ')[0];
 /* per device: room series (sensor, priority) and device series, each with the current value appended */
 function seriesOf(d, now, t0) {
   const h = (D.history || {})[String(d.id)] || {};
-  const r = (Array.isArray(h) ? h : (h.r || [])).filter(p => p[0] >= t0);
-  const dv = (Array.isArray(h) ? [] : (h.d || [])).filter(p => p[0] >= t0);
+  // invalid values (0/-1 while a device delivers nothing) are dropped -> gap in the line
+  const r = (Array.isArray(h) ? h : (h.r || [])).filter(p => p[0] >= t0 && num(p[1]));
+  const dv = (Array.isArray(h) ? [] : (h.d || [])).filter(p => p[0] >= t0 && num(p[1]));
   const room = num(d.room) ? d.room : (num(d.humidity) ? d.humidity : null);
   if (room !== null) r.push([now, room]);
   if (num(d.device)) dv.push([now, d.device]);
@@ -116,16 +117,15 @@ function charts() {
   if (!boxes.length) return;
   const now = D.now || Math.floor(Date.now() / 1000), t0 = now - 86400;
   const all = (D.devices || []).map(d => seriesOf(d, now, t0));
-  const vals = all.flatMap(s => s.r.concat(s.d).map(p => p[1]));
-  let lo = Math.min(35, ...vals, D.target || 50), hi = Math.max(65, ...vals, D.target || 50);
-  lo = Math.floor((lo - 2) / 10) * 10; hi = Math.ceil((hi + 2) / 10) * 10;
+  // 1.13: fixed scale 20–70 %rF (values outside are drawn at the edge)
+  const lo = 20, hi = 70;
   boxes.forEach(box => {
     const sr = all[parseInt(box.dataset.i, 10)];
     const W = box.clientWidth, H = box.clientHeight;
     if (!sr || W < 50 || H < 30) return;
     const L = 22, R = 4, TP = 4, B = 14, pw = W - L - R, ph = H - TP - B;
-    const x = t => L + (t - t0) / 86400 * pw, y = v => TP + (hi - v) / (hi - lo) * ph;
-    let s = '<rect class="cb" x="' + L + '" width="' + pw + '" y="' + y(Math.min(60, hi)) + '" height="' + Math.max(0, y(Math.max(40, lo)) - y(Math.min(60, hi))) + '"/>';
+    const x = t => L + (t - t0) / 86400 * pw, y = v => TP + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * ph;
+    let s = '<rect class="cb" x="' + L + '" width="' + pw + '" y="' + y(60) + '" height="' + (y(40) - y(60)) + '"/>';
     for (let v = lo; v <= hi; v += 10) {
       s += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 3) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + '</text>';
     }
